@@ -40,7 +40,7 @@ interface DsaState {
   completeRevision: (revisionId: string, timeTakenMin: number, confidence: number) => void;
   skipRevision: (revisionId: string) => void;
   
-  getTopicStats: () => { topicId: number; name: string; icon: string; color: string; total: number; solved: number; avgConfidence: number }[];
+  getTopicStats: () => { topicId: number; name: string; icon: string; color: string; description: string; total: number; solved: number; avgConfidence: number }[];
   getProblemsByTopic: (topicId: number) => (DsaProblemSeed & { attemptCount: number; lastAttemptDate: string | null; confidence: number; nextRevisionDate: string | null })[];
   getDueRevisions: () => (DsaRevision & { problemName: string; topicName: string; pattern: string })[];
   getStats: () => { totalSolved: number; totalProblems: number; easy: number; medium: number; hard: number; streakDays: number };
@@ -124,6 +124,7 @@ export const useDsaStore = create<DsaState>()(
             name: topic.name,
             icon: topic.icon,
             color: topic.color,
+            description: topic.description,
             total: topicProblems.length,
             solved: solvedProblems.length,
             avgConfidence: solvedProblems.length ? totalConfidence / solvedProblems.length : 0,

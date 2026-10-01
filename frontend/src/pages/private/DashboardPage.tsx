@@ -1,22 +1,42 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Stat } from '../../components/ui/Stat';
 import { StreakBadge } from '../../components/shared/StreakBadge';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
+import { Textarea } from '../../components/ui/Textarea';
+import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
+import { 
+  Brain, Code, Mic, Activity, CheckCircle2, Clock, 
+  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle
+} from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { userName } = useAuthStore();
   const dsaStore = useDsaStore();
   const sprintStore = useSprintStore();
   const dashboardStore = useDashboardStore();
   const dailyStore = useDailyStore();
 
-  const [greeting, setGreeting] = useState('');
+  const [greeting, setGreeting] = useState('Good Morning');
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [attemptForm, setAttemptForm] = useState({
+    timeTakenMin: 30,
+    solvedIndependently: true,
+    approach: '',
+    mistake: '',
+    complexityTime: 'O(n)',
+    complexitySpace: 'O(1)',
+    lesson: '',
+    confidence: 4,
+  });
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -35,95 +55,404 @@ export const DashboardPage: React.FC = () => {
     if (!bottleneckTopic) return null;
     const problems = dsaStore.getProblemsByTopic(bottleneckTopic.topicId);
     const unsolved = problems.filter(p => p.attemptCount === 0);
-    if (unsolved.length === 0) return null;
-    return unsolved[Math.floor(Math.random() * unsolved.length)];
+    if (unsolved.length === 0) return problems[0] || null;
+    return unsolved[0];
   };
 
   const dsaFocusProblem = randomUnsolvedProblem();
   const activeSprint = sprintStore.getActiveSprint();
   const streaks = dashboardStore.getStreaks();
 
-  const getStreakCount = (type: string) => streaks.find(s => s.type === type)?.currentCount || 0;
-  const getBestStreakCount = (type: string) => streaks.find(s => s.type === type)?.bestCount || 0;
+  // Get current day schedule
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = daysOfWeek[new Date().getDay()].toUpperCase();
+  const todaySchedule = dailyStore.getScheduleForDay(todayName) || [];
+
+  // Backup & Restore
+  const handleExportBackup = () => {
+    const backupData = {
+      dsa: localStorage.getItem('career-os-dsa'),
+      daily: localStorage.getItem('career-os-daily'),
+      sprint: localStorage.getItem('career-os-sprint'),
+      dashboard: localStorage.getItem('career-os-dashboard'),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `careeros-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (data.dsa) localStorage.setItem('career-os-dsa', data.dsa);
+        if (data.daily) localStorage.setItem('career-os-daily', data.daily);
+        if (data.sprint) localStorage.setItem('career-os-sprint', data.sprint);
+        if (data.dashboard) localStorage.setItem('career-os-dashboard', data.dashboard);
+        alert('Backup successfully restored! Reloading dashboard...');
+        window.location.reload();
+      } catch (err) {
+        alert('Invalid backup JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSaveDsaAttempt = () => {
+    if (!dsaFocusProblem) return;
+    dsaStore.logAttempt(dsaFocusProblem.id, attemptForm);
+    dashboardStore.updateStreak('dsa');
+    setLogModalOpen(false);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Executive Briefing Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 rounded-3xl glass-panel relative overflow-hidden border border-white/10">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold mb-3 border border-blue-500/20">
+            <Flame size={13} className="text-amber-400" />
+            <span>Winter Arc Protocol • Target: Product Engineer 2027</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
             {greeting}, {userName}
           </h1>
-          <p className="text-[var(--text-secondary)] mt-1 text-lg">
-            Mission: Product Engineer — 2027
+          <p className="text-[var(--text-secondary)] text-sm mt-1">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
+        </div>
+
+        {/* Backup & Actions Bar */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button 
+            onClick={handleExportBackup}
+            className="px-3.5 py-2 rounded-xl glass-panel text-xs font-medium text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors border border-white/5"
+            title="Download full database snapshot"
+          >
+            <Download size={14} className="text-sky-400" />
+            <span>Export Backup</span>
+          </button>
+
+          <label className="px-3.5 py-2 rounded-xl glass-panel text-xs font-medium text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors border border-white/5 cursor-pointer">
+            <Upload size={14} className="text-purple-400" />
+            <span>Restore Backup</span>
+            <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+          </label>
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      {/* Streaks Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {streaks.map(streak => (
-          <StreakBadge 
-            key={streak.type} 
-            count={streak.currentCount} 
-            bestCount={streak.bestCount} 
-            label={streak.type.toUpperCase()} 
-          />
+          <div key={streak.type} className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              {streak.type}
+            </span>
+            <StreakBadge 
+              count={streak.currentCount} 
+              bestCount={streak.bestCount} 
+              label="days" 
+            />
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-5 flex flex-col h-full border-l-4 border-l-blue-500">
-          <h3 className="font-semibold text-xl mb-4 text-blue-400">DSA Focus</h3>
-          {dsaFocusProblem ? (
-            <div className="flex-1">
-              <p className="text-sm text-[var(--text-secondary)]">Bottleneck Topic: {bottleneckTopic?.name}</p>
-              <h4 className="text-lg font-medium mt-2">{dsaFocusProblem.name}</h4>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">Pattern: {dsaFocusProblem.pattern}</p>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center text-sm text-[var(--text-secondary)]">
-              No specific problem focus right now.
-            </div>
-          )}
-          <div className="mt-4 pt-4 border-t border-[var(--border)] flex justify-between items-center">
-            <span className="text-sm text-[var(--text-secondary)]">Due Revisions</span>
-            <span className="font-bold text-lg text-[var(--text-primary)]">{dueRevisions.length}</span>
-          </div>
-        </Card>
+      {/* The 3 Daily Non-Negotiables */}
+      <div>
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span>Today's 3 Non-Negotiables</span>
+          <span className="text-xs text-gray-400 font-normal">• 9-hr job + high leverage prep</span>
+        </h2>
 
-        <Card className="p-5 flex flex-col h-full border-l-4 border-l-purple-500">
-          <h3 className="font-semibold text-xl mb-4 text-purple-400">Tech Focus</h3>
-          {activeSprint ? (
-            <div className="flex-1">
-              <p className="text-sm text-[var(--text-secondary)]">{activeSprint.technology} - Week {activeSprint.currentWeek} of {activeSprint.totalWeeks}</p>
-              <h4 className="text-lg font-medium mt-2">
-                {activeSprint.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'General'}
-              </h4>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center items-center text-sm text-[var(--text-secondary)]">
-              <p className="mb-3">No active sprint</p>
-              <Button size="sm" onClick={() => window.location.href = '/sprints'}>Create Sprint</Button>
-            </div>
-          )}
-          <div className="mt-4 pt-4 border-t border-[var(--border)] flex justify-between items-center">
-            <span className="text-sm text-[var(--text-secondary)]">This week's proof</span>
-            <span className="font-bold text-sm text-[var(--text-primary)]">
-              {activeSprint ? `${Math.round((activeSprint.weeks.filter(w=>w.completed).length / activeSprint.totalWeeks) * 100)}%` : '0%'}
-            </span>
-          </div>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: 1 DSA Problem */}
+          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                  <Brain size={16} /> 1 DSA Problem
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                  Pattern Focus
+                </span>
+              </div>
 
-        <Card className="p-5 flex flex-col h-full border-l-4 border-l-green-500">
-          <h3 className="font-semibold text-xl mb-4 text-green-400">Communication</h3>
-          <div className="flex-1 flex items-center justify-center">
-            <h4 className="text-lg font-medium text-center">Do a 15 min session</h4>
+              {dsaFocusProblem ? (
+                <>
+                  <h3 className="text-xl font-extrabold text-white mb-1.5">{dsaFocusProblem.name}</h3>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Topic: <strong className="text-gray-200">{bottleneckTopic?.name}</strong> • Pattern: <strong className="text-blue-300 font-mono">{dsaFocusProblem.pattern}</strong>
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400 my-4">All problems in current pattern solved!</p>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-3">
+              <button 
+                onClick={() => setLogModalOpen(true)}
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
+              >
+                <PlusCircle size={14} />
+                <span>Log Today's Attempt</span>
+              </button>
+            </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-[var(--border)] flex justify-center items-center">
-             <Button variant="ghost" size="sm" onClick={() => window.location.href = '/communication'}>Log Session</Button>
+
+          {/* Card 2: Tech Deep Work */}
+          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-purple-500 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                  <Code size={16} /> 90-Min Engineering
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                  Sprint Deep Dive
+                </span>
+              </div>
+
+              {activeSprint ? (
+                <>
+                  <h3 className="text-xl font-extrabold text-white mb-1.5">{activeSprint.technology}</h3>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Week {activeSprint.currentWeek} of {activeSprint.totalWeeks} • <strong className="text-purple-300">{activeSprint.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Core Architecture'}</strong>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1.5">Distributed Systems & Java 21</h3>
+                  <p className="text-xs text-gray-400 mb-4">No custom sprint created. Use the sprint manager to track your 2-week blocks.</p>
+                </>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <button 
+                onClick={() => navigate('/sprint')}
+                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-1.5"
+              >
+                <span>Open Sprint Manager</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
-        </Card>
+
+          {/* Card 3: 15-Min Communication */}
+          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <Mic size={16} /> 15-Min Articulation
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  System Speaking
+                </span>
+              </div>
+
+              <h3 className="text-lg font-bold text-white mb-1.5">Verbal System Walkthrough</h3>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                Explain today's DSA pattern or Kafka partitioning aloud as if speaking to a Principal Engineer at Google or Atlassian.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <button 
+                onClick={() => navigate('/communication')}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+              >
+                <span>Record Session Notes</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Due Revisions Alert Strip */}
+      {dueRevisions.length > 0 && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-300">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base">
+                {dueRevisions.length} Spaced Repetition {dueRevisions.length === 1 ? 'Revision' : 'Revisions'} Due Today
+              </h3>
+              <p className="text-xs text-gray-300 mt-0.5">
+                Next scheduled review: <strong>{dueRevisions[0]?.problemName}</strong> ({dueRevisions[0]?.pattern}). Review now to cement long-term memory.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/dsa')}
+            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 shadow-lg shadow-purple-500/25"
+          >
+            <span>Review Now</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Today's Timetable Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 glass-panel p-6 rounded-3xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-white flex items-center gap-2">
+              <Calendar size={18} className="text-sky-400" />
+              <span>Today's Time Block Blueprint ({todayName})</span>
+            </h3>
+            <button 
+              onClick={() => navigate('/schedule')}
+              className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+            >
+              Edit Timetable
+            </button>
+          </div>
+
+          <div className="space-y-2.5 max-h-80 overflow-y-auto pr-2">
+            {todaySchedule.length === 0 ? (
+              <p className="text-xs text-gray-500 py-4 text-center">No blocks defined for {todayName}. Click Edit to configure.</p>
+            ) : (
+              todaySchedule.map((block, idx) => {
+                const badgeColor = 
+                  block.category === 'study' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                  block.category === 'gym' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                  block.category === 'work' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                  'text-gray-400 bg-white/5 border-white/10';
+
+                return (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-[#090b10] border border-white/5">
+                    <span className="font-mono text-xs font-semibold text-gray-300">{block.time}</span>
+                    <span className="text-sm font-medium text-white flex-1 px-4">{block.activity}</span>
+                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full border capitalize ${badgeColor}`}>
+                      {block.category}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Quick Log Shortcuts */}
+        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between">
+          <div>
+            <h3 className="font-bold text-white mb-4">Quick Habit Check-In</h3>
+            <div className="space-y-3">
+              <button 
+                onClick={() => navigate('/journal')}
+                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-sky-400" />
+                  <span>Log Engineering Journal</span>
+                </span>
+                <ArrowRight size={14} className="text-gray-500" />
+              </button>
+
+              <button 
+                onClick={() => navigate('/gym')}
+                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Activity size={16} className="text-emerald-400" />
+                  <span>Check In Gym Session</span>
+                </span>
+                <ArrowRight size={14} className="text-gray-500" />
+              </button>
+
+              <button 
+                onClick={() => navigate('/review')}
+                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck size={16} className="text-purple-400" />
+                  <span>Weekly Review & Planning</span>
+                </span>
+                <ArrowRight size={14} className="text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-white/5 text-center">
+            <span className="text-xs text-gray-500">
+              "Every metric must produce a deliberate action."
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Log Problem Modal */}
+      <Modal 
+        isOpen={logModalOpen} 
+        onClose={() => setLogModalOpen(false)} 
+        title={`Log Solution: ${dsaFocusProblem?.name}`}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              type="number" 
+              label="Time Taken (Minutes)" 
+              value={attemptForm.timeTakenMin} 
+              onChange={(e) => setAttemptForm({...attemptForm, timeTakenMin: parseInt(e.target.value) || 0})} 
+            />
+            <div className="flex items-center gap-2 pt-6">
+              <input 
+                type="checkbox" 
+                id="dash-indep" 
+                checked={attemptForm.solvedIndependently} 
+                onChange={(e) => setAttemptForm({...attemptForm, solvedIndependently: e.target.checked})} 
+                className="w-4 h-4 rounded text-blue-600"
+              />
+              <label htmlFor="dash-indep" className="text-sm text-gray-300 font-medium">Solved without hints?</label>
+            </div>
+          </div>
+
+          <Textarea 
+            label="Approach & Core Logic" 
+            placeholder="Key data structure or pointer trick used..." 
+            value={attemptForm.approach} 
+            onChange={(e) => setAttemptForm({...attemptForm, approach: e.target.value})} 
+            rows={2} 
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Time Complexity" 
+              value={attemptForm.complexityTime} 
+              onChange={(e) => setAttemptForm({...attemptForm, complexityTime: e.target.value})} 
+              placeholder="O(N)" 
+            />
+            <Input 
+              label="Space Complexity" 
+              value={attemptForm.complexitySpace} 
+              onChange={(e) => setAttemptForm({...attemptForm, complexitySpace: e.target.value})} 
+              placeholder="O(1)" 
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-2 text-[var(--text-secondary)] font-medium">Recall Confidence</label>
+            <ConfidenceStars value={attemptForm.confidence} onChange={(v) => setAttemptForm({...attemptForm, confidence: v})} />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <Button variant="ghost" onClick={() => setLogModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDsaAttempt}>Save Solution & Schedule Revisions</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

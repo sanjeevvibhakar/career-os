@@ -1,35 +1,73 @@
 @import 'tailwindcss';
 
-/* Custom dark theme */
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-card: #1a1a2e;
-  --bg-card-hover: #222240;
-  --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --accent-blue: #3b82f6;
+  --bg-primary: #07090e;
+  --bg-secondary: #0d1117;
+  --bg-card: rgba(18, 22, 34, 0.7);
+  --bg-card-hover: rgba(26, 32, 50, 0.85);
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --accent-blue: #38bdf8;
+  --accent-cyan: #06b6d4;
   --accent-green: #10b981;
   --accent-yellow: #f59e0b;
   --accent-red: #ef4444;
-  --accent-purple: #8b5cf6;
-  --border: #27272a;
+  --accent-purple: #a855f7;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(56, 189, 248, 0.4);
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(56, 189, 248, 0.04) 0px, transparent 50%),
+    radial-gradient(at 90% 90%, rgba(168, 85, 247, 0.04) 0px, transparent 50%),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px;
 }
 
-/* Scrollbar styling */
+/* Glassmorphism Cards */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-focus);
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 25px -5px rgba(56, 189, 248, 0.25);
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(168, 85, 247, 0.25);
+}
+
+.glow-green {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: #21262d;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #30363d;
 }
