@@ -568,92 +568,88 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       )}
 
       {/* Today's Timetable Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-panel p-6 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-white flex items-center gap-2">
-              <Calendar size={18} className="text-sky-400" />
-              <span>Today's Time Block Blueprint ({todayName})</span>
-            </h3>
-            <button 
-              onClick={() => navigate('/schedule')}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium"
-            >
-              Edit Timetable
-            </button>
-          </div>
-
-          <div className="space-y-2.5 max-h-80 overflow-y-auto pr-2">
-            {todaySchedule.length === 0 ? (
-              <p className="text-xs text-gray-500 py-4 text-center">No blocks defined for {todayName}. Click Edit to configure.</p>
-            ) : (
-              todaySchedule.map((block, idx) => {
-                const badgeColor = 
-                  block.category === 'study' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
-                  block.category === 'gym' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                  block.category === 'work' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
-                  'text-gray-400 bg-white/5 border-white/10';
-
-                return (
-                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-[#090b10] border border-white/5">
-                    <span className="font-mono text-xs font-semibold text-gray-300">{block.time}</span>
-                    <span className="text-sm font-medium text-white flex-1 px-4">{block.activity}</span>
-                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full border capitalize ${badgeColor}`}>
-                      {block.category}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Quick Log Shortcuts */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-white mb-4">Quick Habit Check-In</h3>
-            <div className="space-y-3">
-              <button 
-                onClick={() => navigate('/journal')}
-                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-sky-400" />
-                  <span>Log Engineering Journal</span>
-                </span>
-                <ArrowRight size={14} className="text-gray-500" />
-              </button>
-
-              <button 
-                onClick={() => navigate('/gym')}
-                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Activity size={16} className="text-emerald-400" />
-                  <span>Check In Gym Session</span>
-                </span>
-                <ArrowRight size={14} className="text-gray-500" />
-              </button>
-
-              <button 
-                onClick={() => navigate('/review')}
-                className="w-full p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between text-sm text-gray-200 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <ShieldCheck size={16} className="text-purple-400" />
-                  <span>Weekly Review & Planning</span>
-                </span>
-                <ArrowRight size={14} className="text-gray-500" />
-              </button>
+      <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar size={18} className="text-sky-400" />
+            <div>
+              <h3 className="font-extrabold text-white text-sm md:text-base">
+                Today's Daily Timetable ({todayName})
+              </h3>
+              <p className="text-[11px] text-gray-400">
+                {todaySchedule.length} time blocks • High-leverage structured routine
+              </p>
             </div>
           </div>
-
-          <div className="mt-6 pt-4 border-t border-white/5 text-center">
-            <span className="text-xs text-gray-500">
-              "Every metric must produce a deliberate action."
-            </span>
-          </div>
+          <button 
+            onClick={() => navigate('/schedule')}
+            className="text-xs text-blue-400 hover:text-blue-300 font-semibold px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 transition-colors"
+          >
+            Manage Timetable
+          </button>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+          {todaySchedule.length === 0 ? (
+            <p className="col-span-full text-xs text-gray-500 py-6 text-center">No blocks defined for {todayName}. Click Manage Timetable to configure.</p>
+          ) : (
+            todaySchedule.map((block, idx) => {
+              const badgeColor = 
+                block.category === 'study' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                block.category === 'gym' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                block.category === 'work' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                'text-gray-400 bg-white/5 border-white/10';
+
+              return (
+                <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-[#090b10] border border-white/5 hover:border-white/10 transition-colors">
+                  <div className="flex items-center gap-2 truncate mr-2">
+                    <span className="font-mono text-[11px] font-semibold text-gray-400 flex-shrink-0">{block.time}</span>
+                    <span className="text-xs font-medium text-white truncate">{block.activity}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${badgeColor}`}>
+                    {block.category}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Habit Shortcuts Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button 
+          onClick={() => navigate('/journal')}
+          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-sky-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <CheckCircle2 size={15} className="text-sky-400" />
+            <span>Engineering Journal</span>
+          </span>
+          <ArrowRight size={13} className="text-gray-500" />
+        </button>
+
+        <button 
+          onClick={() => navigate('/gym')}
+          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-emerald-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <Activity size={15} className="text-emerald-400" />
+            <span>Gym Check-In</span>
+          </span>
+          <ArrowRight size={13} className="text-gray-500" />
+        </button>
+
+        <button 
+          onClick={() => navigate('/review')}
+          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-purple-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <ShieldCheck size={15} className="text-purple-400" />
+            <span>Weekly Review</span>
+          </span>
+          <ArrowRight size={13} className="text-gray-500" />
+        </button>
       </div>
 
       {/* Log Problem Modal */}
