@@ -15,12 +15,16 @@ import { useAuthStore } from '../../stores/authStore';
 import { 
   Brain, Code, Mic, Activity, CheckCircle2, Clock, 
   Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle,
-  Cloud, Smartphone, Laptop, RefreshCw, Check
+  Cloud, Smartphone, Laptop, RefreshCw, Check, Database, Copy, Zap, ExternalLink, Share2
 } from 'lucide-react';
 import { 
   getSavedCloudUrl, setSavedCloudUrl, testCloudHealth, 
-  syncPushToCloud, syncPullFromCloud 
+  syncPushToCloud, syncPullFromCloud, getExportSnapshot, importSnapshotString
 } from '../../services/cloudSync';
+import { 
+  getSupabaseConfig, setSupabaseConfig, testSupabaseConnection, 
+  pushToSupabase, pullFromSupabase 
+} from '../../services/supabase';
 import { populateDayOneEfforts } from '../../data/dayOneData.ts';
 
 export const DashboardPage: React.FC = () => {
@@ -45,9 +49,73 @@ export const DashboardPage: React.FC = () => {
   });
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncTab, setSyncTab] = useState<'supabase' | 'backup'>('supabase');
   const [cloudUrl, setCloudUrl] = useState(getSavedCloudUrl());
+  const [supabaseUrl, setSupabaseUrl] = useState(getSupabaseConfig().url);
+  const [supabaseKey, setSupabaseKey] = useState(getSupabaseConfig().anonKey);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleCopyMobileLink = () => {
+    if (!supabaseUrl || !supabaseKey) {
+      setSyncMessage('⚠️ Please enter your Supabase Project URL and Anon Key first.');
+      return;
+    }
+    const currentOrigin = window.location.origin;
+    const link = `${currentOrigin}/dashboard?supaUrl=${encodeURIComponent(supabaseUrl.trim())}&supaKey=${encodeURIComponent(supabaseKey.trim())}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
+
+  const handleTestSupabase = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Connecting to Supabase PostgreSQL...');
+    setSupabaseConfig(supabaseUrl, supabaseKey);
+    const res = await testSupabaseConnection();
+    setSyncLoading(false);
+    setSyncMessage(res.message);
+  };
+
+  const handlePushSupabase = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Uploading to Supabase PostgreSQL...');
+    setSupabaseConfig(supabaseUrl, supabaseKey);
+    const snapshot = getExportSnapshot();
+    const res = await pushToSupabase(snapshot);
+    setSyncLoading(false);
+    setSyncMessage(res.message);
+  };
+
+  const handlePullSupabase = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Pulling from Supabase PostgreSQL to this device...');
+    setSupabaseConfig(supabaseUrl, supabaseKey);
+    const res = await pullFromSupabase();
+    setSyncLoading(false);
+    setSyncMessage(res.message);
+    if (res.success && res.data) {
+      importSnapshotString(JSON.stringify(res.data));
+      setTimeout(() => window.location.reload(), 1200);
+    }
+  };
+
+  const handleCopySql = () => {
+    const sql = `-- Run this in Supabase SQL Editor:
+create table if not exists career_os_sync (
+  id text primary key default 'primary',
+  payload jsonb not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table career_os_sync enable row level security;
+create policy "Allow public access" on career_os_sync for all using (true) with check (true);`;
+    navigator.clipboard.writeText(sql);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
 
   const handleTestCloud = async () => {
     setSyncLoading(true);
@@ -87,6 +155,28 @@ export const DashboardPage: React.FC = () => {
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+
+    // Auto-configure from Magic Link if present (e.g. opened from phone)
+    const params = new URLSearchParams(window.location.search);
+    const qUrl = params.get('supaUrl');
+    const qKey = params.get('supaKey');
+    if (qUrl && qKey) {
+      setSupabaseConfig(qUrl, qKey);
+      setSupabaseUrl(qUrl);
+      setSupabaseKey(qKey);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setSyncModalOpen(true);
+      setSyncMessage('🚀 Magic Mobile Link detected! Pulling latest cloud data...');
+      pullFromSupabase().then((res) => {
+        if (res.success && res.data) {
+          importSnapshotString(JSON.stringify(res.data));
+          setSyncMessage('✓ Phone successfully paired and synced from Supabase! Reloading...');
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          setSyncMessage(res.message);
+        }
+      });
+    }
   }, []);
 
   const dueRevisions = dsaStore.getDueRevisions();
@@ -512,92 +602,236 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setSyncModalOpen(false)}
         title="Cross-Device Cloud Sync (Phone & Laptop)"
       >
-        <div className="space-y-6">
-          <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 leading-relaxed flex items-start gap-3">
-            <Smartphone size={24} className="flex-shrink-0 text-blue-400 mt-0.5" />
-            <div>
-              <strong className="text-white block text-sm mb-1">How Cross-Device Sync Works:</strong>
-              When you push your data to the cloud on your laptop, you can immediately pull it on your phone so both devices stay 100% in sync without losing a single problem, journal, or streak.
-            </div>
-          </div>
-
-          {/* Backend Connection */}
-          <div className="space-y-3 p-4 rounded-2xl bg-[#090b10] border border-white/5">
-            <label className="text-xs font-semibold text-gray-300 block">
-              Cloud Backend API Endpoint
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={cloudUrl}
-                onChange={(e) => setCloudUrl(e.target.value)}
-                placeholder="https://career-os-backend.onrender.com"
-                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              />
-              <button
-                onClick={handleTestCloud}
-                disabled={syncLoading}
-                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-gray-300 font-medium transition-colors"
-              >
-                Test Ping
-              </button>
-            </div>
-          </div>
-
-          {/* Push & Pull Actions */}
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-5">
+          {/* Tabs */}
+          <div className="flex rounded-xl bg-white/5 p-1 border border-white/5">
             <button
-              onClick={handlePush}
-              disabled={syncLoading}
-              className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-500/20 flex flex-col items-center justify-center gap-2 text-center"
+              onClick={() => { setSyncTab('supabase'); setSyncMessage(null); }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                syncTab === 'supabase'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <Upload size={18} />
-              <span>Push to Cloud (Laptop ➔ Cloud)</span>
-              <span className="text-[10px] text-blue-200 font-normal">Back up this device to server</span>
+              <Zap size={14} className="text-amber-300" />
+              <span>Supabase Cloud (0ms • Free)</span>
             </button>
-
             <button
-              onClick={handlePull}
-              disabled={syncLoading}
-              className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-purple-500/20 flex flex-col items-center justify-center gap-2 text-center"
+              onClick={() => { setSyncTab('backup'); setSyncMessage(null); }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                syncTab === 'backup'
+                  ? 'bg-white/10 text-white shadow-md'
+                  : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <Download size={18} />
-              <span>Pull to Device (Cloud ➔ Phone)</span>
-              <span className="text-[10px] text-purple-200 font-normal">Sync latest progress to this device</span>
+              <Database size={14} className="text-sky-400" />
+              <span>Offline JSON & Pre-fill</span>
             </button>
           </div>
 
-          {syncMessage && (
-            <div className={`p-3 rounded-xl text-xs ${syncMessage.includes('✓') ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : syncMessage.includes('⚠️') ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-blue-500/10 text-blue-300 border border-blue-500/20'}`}>
-              {syncMessage}
+          {syncTab === 'supabase' && (
+            <div className="space-y-4">
+              <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 leading-relaxed flex items-start gap-2.5">
+                <Zap size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-white font-semibold">Instant 0ms Cloud Sync:</strong>
+                  {' '}Direct HTTPS connection to your free Supabase PostgreSQL database. <strong>No sleep, 0ms cold-start</strong>, and keeps your laptop and phone 100% in sync!
+                </div>
+              </div>
+
+              {/* Push & Pull Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={handlePushSupabase}
+                  disabled={syncLoading}
+                  className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-500/20 flex flex-col items-center justify-center gap-1.5 text-center active:scale-[0.98]"
+                >
+                  <Upload size={18} />
+                  <span>Push to Cloud (Upload)</span>
+                  <span className="text-[10px] text-blue-200 font-normal">Back up this device to Supabase</span>
+                </button>
+
+                <button
+                  onClick={handlePullSupabase}
+                  disabled={syncLoading}
+                  className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 flex flex-col items-center justify-center gap-1.5 text-center active:scale-[0.98]"
+                >
+                  <Download size={18} />
+                  <span>Pull to Device (Download)</span>
+                  <span className="text-[10px] text-emerald-200 font-normal">Sync latest progress to this device</span>
+                </button>
+              </div>
+
+              {/* Status Message */}
+              {syncMessage && (
+                <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  syncMessage.includes('✓') 
+                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' 
+                    : syncMessage.includes('⚠️') || syncMessage.includes('Error') || syncMessage.includes('failed')
+                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' 
+                    : 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
+                }`}>
+                  <Activity size={14} className="flex-shrink-0 animate-pulse" />
+                  <span>{syncMessage}</span>
+                </div>
+              )}
+
+              {/* Mobile 1-Click Setup Link */}
+              <div className="p-3.5 rounded-2xl bg-[#090b10] border border-blue-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-white">
+                    <Smartphone size={15} className="text-sky-400" />
+                    <span>Sync with your Phone in 1-Click</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">Magic Setup</span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  After setting your URL & Key below, click this button to copy a magic sync link. Send it to your phone (WhatsApp/Notes) and tap it — your phone connects and syncs immediately without typing keys!
+                </p>
+                <button
+                  onClick={handleCopyMobileLink}
+                  className="w-full py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-white font-semibold text-xs border border-blue-500/40 flex items-center justify-center gap-2 transition-all"
+                >
+                  {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
+                  <span>{copiedLink ? '✓ Magic Mobile Link Copied to Clipboard!' : 'Copy Magic Mobile Sync Link'}</span>
+                </button>
+              </div>
+
+              {/* Credentials Form */}
+              <div className="space-y-3 p-4 rounded-2xl bg-[#090b10] border border-white/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-300 block">
+                    Supabase Project Credentials
+                  </label>
+                  <a 
+                    href="https://supabase.com/dashboard" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-[11px] text-blue-400 hover:underline flex items-center gap-1"
+                  >
+                    <span>Supabase Dashboard</span>
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-gray-400 block mb-1">Project URL</label>
+                  <input
+                    type="text"
+                    value={supabaseUrl}
+                    onChange={(e) => {
+                      setSupabaseUrl(e.target.value);
+                      setSupabaseConfig(e.target.value, supabaseKey);
+                    }}
+                    placeholder="https://xxxxxxxxxxxx.supabase.co"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-gray-400 block mb-1">Anon Public Key</label>
+                  <input
+                    type="password"
+                    value={supabaseKey}
+                    onChange={(e) => {
+                      setSupabaseKey(e.target.value);
+                      setSupabaseConfig(supabaseUrl, e.target.value);
+                    }}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+
+                <button
+                  onClick={handleTestSupabase}
+                  disabled={syncLoading}
+                  className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-gray-200 font-semibold transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 size={13} className="text-emerald-400" />
+                  <span>Test Supabase Connection</span>
+                </button>
+              </div>
+
+              {/* SQL Table Creation Guide */}
+              <div className="p-3.5 rounded-2xl bg-[#090b10] border border-white/5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-300">
+                    <Database size={13} className="text-amber-400" />
+                    <span>One-Time SQL Table Setup (30 Seconds)</span>
+                  </div>
+                  <button
+                    onClick={handleCopySql}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] text-gray-300 flex items-center gap-1 transition-colors"
+                  >
+                    {copiedSql ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    <span>{copiedSql ? 'Copied!' : 'Copy SQL'}</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  In your Supabase project, go to <strong>SQL Editor</strong>, paste this snippet, and click <strong>Run</strong>:
+                </p>
+                <pre className="p-2.5 rounded-xl bg-black/40 text-[10px] text-gray-400 font-mono overflow-x-auto border border-white/5 leading-tight">
+{`create table if not exists career_os_sync (
+  id text primary key default 'primary',
+  payload jsonb not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+alter table career_os_sync enable row level security;
+create policy "Allow public access" on career_os_sync for all using (true) with check (true);`}
+                </pre>
+              </div>
             </div>
           )}
 
-          {/* 1-Click Populate Day 1 */}
-          <button
-            onClick={() => {
-              populateDayOneEfforts();
-              setSyncMessage('✓ Day 1 efforts (Two Sum DSA, Journal, Gym, Sprint) loaded!');
-              setTimeout(() => window.location.reload(), 800);
-            }}
-            className="w-full py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-bold text-xs border border-emerald-500/30 flex items-center justify-center gap-2 transition-all shadow-sm"
-          >
-            <Check size={16} />
-            <span>Pre-fill Day 1 Efforts (Oct 1, 2026)</span>
-          </button>
+          {syncTab === 'backup' && (
+            <div className="space-y-4">
+              {/* 1-Click Populate Day 1 */}
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                <strong className="text-xs font-semibold text-emerald-300 block">
+                  Winter Arc Day 1 Pre-population
+                </strong>
+                <p className="text-xs text-gray-300">
+                  Pre-fills Oct 1, 2026 data: Two Sum solved in DSA, Daily Journal, Push Gym session, Communication log, and Day 1 Streaks.
+                </p>
+                <button
+                  onClick={() => {
+                    populateDayOneEfforts();
+                    setSyncMessage('✓ Day 1 efforts loaded!');
+                    setTimeout(() => window.location.reload(), 800);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20"
+                >
+                  <Check size={16} />
+                  <span>Pre-fill Day 1 Efforts (Oct 1, 2026)</span>
+                </button>
+              </div>
 
-          {/* Instant Offline Snapshot Alternative */}
-          <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
-            <span>Offline file alternative:</span>
-            <div className="flex gap-2">
-              <button onClick={handleExportBackup} className="text-sky-400 hover:underline">Download JSON</button>
-              <span>•</span>
-              <label className="text-purple-400 hover:underline cursor-pointer">
-                Restore JSON
-                <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
-              </label>
+              {/* JSON Backup & Restore */}
+              <div className="p-4 rounded-2xl bg-[#090b10] border border-white/5 space-y-3">
+                <strong className="text-xs font-semibold text-gray-300 block">
+                  Offline File Backup
+                </strong>
+                <p className="text-xs text-gray-400">
+                  Save a physical JSON file snapshot to your computer, or restore from a previous JSON file.
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <button
+                    onClick={handleExportBackup}
+                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Download size={14} className="text-sky-400" />
+                    <span>Download JSON</span>
+                  </button>
+
+                  <label className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center justify-center gap-2 transition-colors cursor-pointer text-center">
+                    <Upload size={14} className="text-purple-400" />
+                    <span>Restore JSON</span>
+                    <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Modal>
     </div>
