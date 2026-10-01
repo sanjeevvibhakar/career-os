@@ -14,11 +14,12 @@ execSync('npm install', { cwd: frontendDir, stdio: 'inherit' });
 console.log('2. Building frontend...');
 execSync('npm run build', { cwd: frontendDir, stdio: 'inherit' });
 
-console.log('3. Setting up SPA routing fallbacks (_redirects & 404.html)...');
-const indexHtml = path.join(frontendDist, 'index.html');
-const fallback404 = path.join(frontendDist, '404.html');
-if (fs.existsSync(indexHtml)) {
-  fs.copyFileSync(indexHtml, fallback404);
+console.log('3. Setting up SPA routing fallback...');
+// Cloudflare Workers with static assets uses wrangler.json not_found_handling = "single-page-application"
+// Ensure no problematic _redirects file exists that conflicts with wrangler
+const redirectsPath = path.join(frontendDist, '_redirects');
+if (fs.existsSync(redirectsPath)) {
+  fs.rmSync(redirectsPath, { force: true });
 }
 
 if (fs.existsSync(rootDist)) {
@@ -26,4 +27,4 @@ if (fs.existsSync(rootDist)) {
 }
 fs.cpSync(frontendDist, rootDist, { recursive: true });
 
-console.log('✓ Build, 404 fallback, and dist copy complete!');
+console.log('✓ Build and dist copy complete!');
