@@ -21,6 +21,7 @@ import {
   getSavedCloudUrl, setSavedCloudUrl, testCloudHealth, 
   syncPushToCloud, syncPullFromCloud 
 } from '../../services/cloudSync';
+import { populateDayOneEfforts } from '../../data/dayOneData.ts';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -571,6 +572,19 @@ export const DashboardPage: React.FC = () => {
               {syncMessage}
             </div>
           )}
+
+          {/* 1-Click Populate Day 1 */}
+          <button
+            onClick={() => {
+              populateDayOneEfforts();
+              setSyncMessage('✓ Day 1 efforts (Two Sum DSA, Journal, Gym, Sprint) loaded!');
+              setTimeout(() => window.location.reload(), 800);
+            }}
+            className="w-full py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-bold text-xs border border-emerald-500/30 flex items-center justify-center gap-2 transition-all shadow-sm"
+          >
+            <Check size={16} />
+            <span>Pre-fill Day 1 Efforts (Oct 1, 2026)</span>
+          </button>
 
           {/* Instant Offline Snapshot Alternative */}
           <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
