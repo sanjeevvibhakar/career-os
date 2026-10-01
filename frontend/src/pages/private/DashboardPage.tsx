@@ -198,6 +198,20 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
   const activeSprint = sprintStore.getActiveSprint();
   const streaks = dashboardStore.getStreaks();
 
+  // KPI Metrics Calculation
+  const dsaStats = dsaStore.getStats();
+  const totalSolved = dsaStats.totalSolved;
+  const commLogs = dailyStore.getRecentCommunications(10);
+  const commCount = commLogs.length;
+  const dsaStreak = streaks.find(s => s.type === 'dsa')?.currentCount || 1;
+
+  // Today's non-negotiable status
+  const todayDate = new Date().toISOString().split('T')[0];
+  const solvedDsaToday = dsaStore.attempts.some(a => a.attemptedAt.startsWith(todayDate));
+  const loggedTechToday = sprintStore.logs.some(l => l.date === todayDate);
+  const loggedCommToday = dailyStore.communications.some(c => c.date === todayDate);
+  const completedTodayCount = (solvedDsaToday ? 1 : 0) + (loggedTechToday ? 1 : 0) + (loggedCommToday ? 1 : 0);
+
   // Get current day schedule
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayName = daysOfWeek[new Date().getDay()].toUpperCase();
@@ -248,205 +262,307 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Executive Briefing Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 rounded-3xl glass-panel relative overflow-hidden border border-white/10">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-5 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:p-6 rounded-2xl glass-panel relative overflow-hidden border border-white/10">
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
         
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold mb-3 border border-blue-500/20">
-            <Flame size={13} className="text-amber-400" />
-            <span>Winter Arc Protocol • Target: Product Engineer 2027</span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold mb-1 border border-blue-500/20">
+            <Flame size={12} className="text-amber-400" />
+            <span>Winter Arc Protocol • Target: Product Co 2027</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">
             {greeting}, {userName}
           </h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          <p className="text-[var(--text-secondary)] text-xs mt-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        {/* Backup & Actions Bar */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Sync & Backup Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button 
             onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
-            className={`px-3.5 py-2 rounded-xl font-semibold text-xs border flex items-center gap-2 transition-all shadow-sm ${
+            className={`px-3 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1.5 transition-all shadow-sm ${
               supabaseUrl && supabaseKey 
                 ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                 : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border-blue-500/30'
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${supabaseUrl && supabaseKey ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
-            <span>{supabaseUrl && supabaseKey ? 'Cloud Sync Active' : 'Phone & Laptop Sync'}</span>
+            <span>{supabaseUrl && supabaseKey ? 'Cloud Active' : 'Sync Device'}</span>
           </button>
 
           <button 
             onClick={handleExportBackup}
-            className="px-3.5 py-2 rounded-xl glass-panel text-xs font-medium text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors border border-white/5"
-            title="Download full database snapshot"
+            className="px-2.5 py-1.5 rounded-xl glass-panel text-xs text-gray-300 hover:text-white flex items-center gap-1 border border-white/5"
+            title="Download JSON snapshot"
           >
-            <Download size={14} className="text-sky-400" />
-            <span>Export Backup</span>
+            <Download size={13} className="text-sky-400" />
+            <span className="hidden sm:inline">Export</span>
           </button>
 
-          <label className="px-3.5 py-2 rounded-xl glass-panel text-xs font-medium text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors border border-white/5 cursor-pointer">
-            <Upload size={14} className="text-purple-400" />
-            <span>Restore Backup</span>
+          <label className="px-2.5 py-1.5 rounded-xl glass-panel text-xs text-gray-300 hover:text-white flex items-center gap-1 border border-white/5 cursor-pointer">
+            <Upload size={13} className="text-purple-400" />
+            <span className="hidden sm:inline">Restore</span>
             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
           </label>
         </div>
       </div>
 
-      {/* Streaks Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {streaks.map(streak => (
-          <div key={streak.type} className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-              {streak.type}
+      {/* Top 4 Primary Analytics KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
+        {/* KPI 1: DSA */}
+        <div 
+          onClick={() => navigate('/dsa')}
+          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/5"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1">
+              <Brain size={13} /> <span>DSA Solved</span>
             </span>
-            <StreakBadge 
-              count={streak.currentCount} 
-              bestCount={streak.bestCount} 
-              label="days" 
-            />
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono">
+              {((totalSolved / 80) * 100).toFixed(0)}%
+            </span>
           </div>
-        ))}
+          <div className="text-xl md:text-2xl font-black text-white">{totalSolved} <span className="text-xs text-gray-400 font-normal">/ 80</span></div>
+          <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
+            <span className="text-emerald-400 font-medium">{dsaStats.easy}E</span>
+            <span>•</span>
+            <span className="text-amber-400 font-medium">{dsaStats.medium}M</span>
+            <span>•</span>
+            <span className="text-rose-400 font-medium">{dsaStats.hard}H</span>
+          </div>
+        </div>
+
+        {/* KPI 2: Tech Sprint */}
+        <div 
+          onClick={() => navigate('/sprint')}
+          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/5"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
+              <Code size={13} /> <span>Tech Sprint</span>
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono">
+              W{activeSprint?.currentWeek || 1}
+            </span>
+          </div>
+          <div className="text-base md:text-lg font-bold text-white truncate">
+            {activeSprint?.technology || 'Java 21 Backend'}
+          </div>
+          <div className="text-[11px] text-gray-400 mt-1 truncate">
+            {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Virtual Threads & Concurrency'}
+          </div>
+        </div>
+
+        {/* KPI 3: Speech Practice */}
+        <div 
+          onClick={() => navigate('/communication')}
+          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-emerald-500/40 cursor-pointer transition-all hover:bg-white/5"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+              <Mic size={13} /> <span>Speech Studio</span>
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono">
+              Spoken
+            </span>
+          </div>
+          <div className="text-xl md:text-2xl font-black text-white">
+            {commCount} <span className="text-xs text-gray-400 font-normal">Sessions</span>
+          </div>
+          <div className="text-[11px] text-gray-400 mt-1">
+            Technical speaking practice
+          </div>
+        </div>
+
+        {/* KPI 4: Momentum Streak */}
+        <div 
+          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+              <Flame size={13} /> <span>Momentum</span>
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono">
+              Active
+            </span>
+          </div>
+          <div className="text-xl md:text-2xl font-black text-white">
+            {dsaStreak} <span className="text-xs text-gray-400 font-normal">Days</span>
+          </div>
+          <div className="text-[11px] text-gray-400 mt-1">
+            Target: Product Co 2027
+          </div>
+        </div>
       </div>
 
-      {/* The 3 Daily Non-Negotiables */}
-      <div>
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span>Today's 3 Non-Negotiables</span>
-          <span className="text-xs text-gray-400 font-normal">• 9-hr job + high leverage prep</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: 1 DSA Problem */}
-          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
-                  <Brain size={16} /> 1 DSA Problem
-                </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                  Pattern Focus
-                </span>
-              </div>
-
-              {dsaFocusProblem ? (
-                <>
-                  <h3 className="text-xl font-extrabold text-white mb-1.5">{dsaFocusProblem.name}</h3>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Topic: <strong className="text-gray-200">{bottleneckTopic?.name}</strong> • Pattern: <strong className="text-blue-300 font-mono">{dsaFocusProblem.pattern}</strong>
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-gray-400 my-4">All problems in current pattern solved!</p>
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-3">
-              <button 
-                onClick={() => setLogModalOpen(true)}
-                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
-              >
-                <PlusCircle size={14} />
-                <span>Log Today's Attempt</span>
-              </button>
+      {/* Today's 3 Non-Negotiables Interactive Checklist */}
+      <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-emerald-400" />
+            <h2 className="text-sm md:text-base font-extrabold text-white">
+              Today's 3 Non-Negotiables
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-300">
+              {completedTodayCount} of 3 Done
+            </span>
+            <div className="w-16 h-2 rounded-full bg-white/10 overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                style={{ width: `${(completedTodayCount / 3) * 100}%` }}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Card 2: Tech Deep Work */}
-          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-purple-500 flex flex-col justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Item 1: 1 DSA Problem */}
+          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+            solvedDsaToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-[#090b10] border-white/5 hover:border-blue-500/30'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                  <Code size={16} /> 90-Min Engineering
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Brain size={14} /> 1. DSA Problem
                 </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                  Sprint Deep Dive
-                </span>
+                {solvedDsaToday ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={10} /> Solved
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                    {dsaFocusProblem?.pattern || 'Pattern'}
+                  </span>
+                )}
               </div>
-
-              {activeSprint ? (
-                <>
-                  <h3 className="text-xl font-extrabold text-white mb-1.5">{activeSprint.technology}</h3>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Week {activeSprint.currentWeek} of {activeSprint.totalWeeks} • <strong className="text-purple-300">{activeSprint.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Core Architecture'}</strong>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-lg font-bold text-white mb-1.5">Distributed Systems & Java 21</h3>
-                  <p className="text-xs text-gray-400 mb-4">No custom sprint created. Use the sprint manager to track your 2-week blocks.</p>
-                </>
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-white/5">
-              <button 
-                onClick={() => navigate('/sprint')}
-                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-1.5"
-              >
-                <span>Open Sprint Manager</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3: 15-Min Communication */}
-          <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                  <Mic size={16} /> 15-Min Articulation
-                </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                  System Speaking
-                </span>
+              
+              <div className="text-sm font-bold text-white mb-1">
+                {dsaFocusProblem?.name || 'Two Sum'}
               </div>
-
-              <h3 className="text-lg font-bold text-white mb-1.5">Verbal System Walkthrough</h3>
-              <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-                Explain today's DSA pattern or Kafka partitioning aloud as if speaking to a Principal Engineer at Google or Atlassian.
+              <p className="text-[11px] text-gray-400 mb-3">
+                Topic: {bottleneckTopic?.name || 'Arrays & Hashing'}
               </p>
             </div>
 
-            <div className="pt-4 border-t border-white/5">
-              <button 
-                onClick={() => navigate('/communication')}
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5"
-              >
-                <span>Record Session Notes</span>
-                <ArrowRight size={14} />
-              </button>
+            <button
+              onClick={() => setLogModalOpen(true)}
+              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+            >
+              <PlusCircle size={13} />
+              <span>{solvedDsaToday ? 'Log Another Problem' : 'Solve & Log Problem'}</span>
+            </button>
+          </div>
+
+          {/* Item 2: Tech Sprint */}
+          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+            loggedTechToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-[#090b10] border-white/5 hover:border-purple-500/30'
+          }`}>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Code size={14} /> 2. 45-Min Tech Learning
+                </span>
+                {loggedTechToday ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={10} /> Logged
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                    Deep Work
+                  </span>
+                )}
+              </div>
+
+              <div className="text-sm font-bold text-white mb-1 truncate">
+                {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Java 21 Concurrency'}
+              </div>
+              <p className="text-[11px] text-gray-400 mb-3 truncate">
+                Sprint: {activeSprint?.technology || 'Java 21 Backend'}
+              </p>
             </div>
+
+            <button
+              onClick={() => navigate('/sprint')}
+              className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+            >
+              <span>{loggedTechToday ? 'View Sprint Progress' : 'Open Sprint & Log'}</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {/* Item 3: 5-Min Speech Practice */}
+          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+            loggedCommToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-[#090b10] border-white/5 hover:border-emerald-500/30'
+          }`}>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Mic size={14} /> 3. 5-Min Speech Studio
+                </span>
+                {loggedCommToday ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={10} /> Spoken
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    Articulation
+                  </span>
+                )}
+              </div>
+
+              <div className="text-sm font-bold text-white mb-1 truncate">
+                Explain: {dsaFocusProblem?.name || 'Two Sum'} Intuition
+              </div>
+              <p className="text-[11px] text-gray-400 mb-3">
+                Practice explaining trade-offs aloud in English
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate('/communication')}
+              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+            >
+              <Mic size={13} />
+              <span>{loggedCommToday ? 'Practice More Topics' : 'Open Speech Studio'}</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Due Revisions Alert Strip */}
       {dueRevisions.length > 0 && (
-        <div className="p-6 rounded-3xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-purple-500/20 text-purple-300">
-              <Clock size={24} />
+            <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300">
+              <Clock size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">
+              <h3 className="font-bold text-white text-sm">
                 {dueRevisions.length} Spaced Repetition {dueRevisions.length === 1 ? 'Revision' : 'Revisions'} Due Today
               </h3>
               <p className="text-xs text-gray-300 mt-0.5">
-                Next scheduled review: <strong>{dueRevisions[0]?.problemName}</strong> ({dueRevisions[0]?.pattern}). Review now to cement long-term memory.
+                Next scheduled review: <strong>{dueRevisions[0]?.problemName}</strong> ({dueRevisions[0]?.pattern}).
               </p>
             </div>
           </div>
           <button 
             onClick={() => navigate('/dsa')}
-            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 shadow-lg shadow-purple-500/25"
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1 flex-shrink-0 shadow-lg shadow-purple-500/25"
           >
             <span>Review Now</span>
-            <ArrowRight size={14} />
+            <ArrowRight size={13} />
           </button>
         </div>
       )}
