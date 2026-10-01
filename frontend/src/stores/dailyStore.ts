@@ -25,13 +25,30 @@ interface CommunicationLog {
   createdAt: string;
 }
 
-interface GymSession {
+export interface CompletedSet {
+  setNumber: number;
+  weightKg: number;
+  reps: number;
+  completed: boolean;
+}
+
+export interface CompletedExercise {
+  exerciseId: string;
+  exerciseName: string;
+  targetMuscle?: string;
+  completed: boolean;
+  sets: CompletedSet[];
+}
+
+export interface GymSession {
   id: string;
   date: string;
-  type: 'UPPER' | 'LOWER' | 'CARDIO' | 'SPORT' | 'REST';
+  type: string;
   completed: boolean;
   durationMinutes: number;
   notes: string;
+  exercises?: CompletedExercise[];
+  totalVolumeKg?: number;
 }
 
 interface ScheduleBlock {

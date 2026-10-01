@@ -14,7 +14,7 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   Brain, Code, Mic, Activity, CheckCircle2, Clock, 
-  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle,
+  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle, Dumbbell,
   Cloud, Smartphone, Laptop, RefreshCw, Check, Database, Copy, Zap, ExternalLink, Share2, Settings
 } from 'lucide-react';
 import { 
@@ -262,351 +262,286 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
   };
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:p-6 rounded-2xl glass-panel relative overflow-hidden border border-white/10">
-        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        
+    <div className="space-y-4 max-w-7xl mx-auto pb-8">
+      {/* Slim Header */}
+      <div className="flex items-center justify-between p-3.5 sm:p-5 rounded-2xl glass-panel relative border border-white/10">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold mb-1 border border-blue-500/20">
-            <Flame size={12} className="text-amber-400" />
-            <span>Winter Arc Protocol • Target: Product Co 2027</span>
-          </div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">
-            {greeting}, {userName}
+          <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <span>{greeting}, {userName}</span>
           </h1>
-          <p className="text-[var(--text-secondary)] text-xs mt-0.5">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+          <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </p>
         </div>
 
         {/* Sync & Backup Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button 
             onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
-            className={`px-3 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1.5 transition-all shadow-sm ${
+            className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1.5 transition-all shadow-sm ${
               supabaseUrl && supabaseKey 
                 ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                 : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border-blue-500/30'
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${supabaseUrl && supabaseKey ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
-            <span>{supabaseUrl && supabaseKey ? 'Cloud Active' : 'Sync Device'}</span>
+            <span className="text-xs font-semibold">{supabaseUrl && supabaseKey ? 'Cloud Active' : 'Sync'}</span>
           </button>
 
           <button 
             onClick={handleExportBackup}
-            className="px-2.5 py-1.5 rounded-xl glass-panel text-xs text-gray-300 hover:text-white flex items-center gap-1 border border-white/5"
-            title="Download JSON snapshot"
+            className="p-1.5 rounded-xl glass-panel text-gray-300 hover:text-white border border-white/10"
+            title="Export JSON snapshot"
           >
-            <Download size={13} className="text-sky-400" />
-            <span className="hidden sm:inline">Export</span>
+            <Download size={14} className="text-sky-400" />
           </button>
 
-          <label className="px-2.5 py-1.5 rounded-xl glass-panel text-xs text-gray-300 hover:text-white flex items-center gap-1 border border-white/5 cursor-pointer">
-            <Upload size={13} className="text-purple-400" />
-            <span className="hidden sm:inline">Restore</span>
+          <label className="p-1.5 rounded-xl glass-panel text-gray-300 hover:text-white border border-white/10 cursor-pointer" title="Restore JSON snapshot">
+            <Upload size={14} className="text-purple-400" />
             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
           </label>
         </div>
       </div>
 
-      {/* Top 4 Primary Analytics KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
+      {/* Top 4 Micro-KPIs Strip (Zero Fluff Text) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {/* KPI 1: DSA */}
         <div 
           onClick={() => navigate('/dsa')}
-          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/5"
+          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1">
-              <Brain size={13} /> <span>DSA Solved</span>
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 font-mono">
-              {((totalSolved / 80) * 100).toFixed(0)}%
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-blue-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Brain size={13} /> DSA</span>
+            <span>{((totalSolved / 80) * 100).toFixed(0)}%</span>
           </div>
-          <div className="text-xl md:text-2xl font-black text-white">{totalSolved} <span className="text-xs text-gray-400 font-normal">/ 80</span></div>
-          <div className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
-            <span className="text-emerald-400 font-medium">{dsaStats.easy}E</span>
-            <span>•</span>
-            <span className="text-amber-400 font-medium">{dsaStats.medium}M</span>
-            <span>•</span>
-            <span className="text-rose-400 font-medium">{dsaStats.hard}H</span>
+          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
+            {totalSolved} <span className="text-xs text-gray-400 font-normal">/ 80</span>
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+            <span className="text-emerald-400">{dsaStats.easy}E</span> • <span className="text-amber-400">{dsaStats.medium}M</span> • <span className="text-rose-400">{dsaStats.hard}H</span>
           </div>
         </div>
 
         {/* KPI 2: Tech Sprint */}
         <div 
           onClick={() => navigate('/sprint')}
-          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/5"
+          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
-              <Code size={13} /> <span>Tech Sprint</span>
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono">
-              W{activeSprint?.currentWeek || 1}
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-purple-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Code size={13} /> TECH</span>
+            <span>W{activeSprint?.currentWeek || 1}</span>
           </div>
-          <div className="text-base md:text-lg font-bold text-white truncate">
-            {activeSprint?.technology || 'Java 21 Backend'}
+          <div className="text-sm sm:text-base font-bold text-white truncate mt-1">
+            {activeSprint?.technology || 'Java 21'}
           </div>
-          <div className="text-[11px] text-gray-400 mt-1 truncate">
-            {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Virtual Threads & Concurrency'}
+          <div className="text-[10px] text-gray-400 truncate mt-0.5 font-mono">
+            {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Concurrency'}
           </div>
         </div>
 
         {/* KPI 3: Speech Practice */}
         <div 
           onClick={() => navigate('/communication')}
-          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10 hover:border-emerald-500/40 cursor-pointer transition-all hover:bg-white/5"
+          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-emerald-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-              <Mic size={13} /> <span>Speech Studio</span>
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono">
-              Spoken
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Mic size={13} /> SPEECH</span>
+            <span className="text-[10px] text-emerald-300 font-semibold">Ready</span>
           </div>
-          <div className="text-xl md:text-2xl font-black text-white">
-            {commCount} <span className="text-xs text-gray-400 font-normal">Sessions</span>
+          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
+            {commCount} <span className="text-xs text-gray-400 font-normal">Sess</span>
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">
-            Technical speaking practice
+          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+            Articulation Logs
           </div>
         </div>
 
         {/* KPI 4: Momentum Streak */}
         <div 
-          className="glass-panel p-3.5 md:p-4 rounded-2xl border border-white/10"
+          className="glass-panel p-3 rounded-xl border border-white/10"
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
-              <Flame size={13} /> <span>Momentum</span>
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono">
-              Active
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-amber-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Flame size={13} /> STREAK</span>
+            <span>🔥</span>
           </div>
-          <div className="text-xl md:text-2xl font-black text-white">
+          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
             {dsaStreak} <span className="text-xs text-gray-400 font-normal">Days</span>
           </div>
-          <div className="text-[11px] text-gray-400 mt-1">
-            Target: Product Co 2027
+          <div className="text-[10px] text-amber-400/80 mt-0.5 font-mono">
+            Winter Arc Active
           </div>
         </div>
       </div>
 
-      {/* Today's 3 Non-Negotiables Interactive Checklist */}
-      <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/10 space-y-4">
+      {/* Today's 3 Non-Negotiables: Sleek 1-Line Interactive Rows */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-emerald-400" />
-            <h2 className="text-sm md:text-base font-extrabold text-white">
+            <CheckCircle2 size={16} className="text-emerald-400" />
+            <h2 className="text-xs sm:text-sm font-extrabold text-white uppercase tracking-wider font-mono">
               Today's 3 Non-Negotiables
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-300">
-              {completedTodayCount} of 3 Done
+            <span className="text-xs font-bold text-emerald-400 font-mono">
+              {completedTodayCount}/3 Done
             </span>
-            <div className="w-16 h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className="w-12 h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
                 style={{ width: `${(completedTodayCount / 3) * 100}%` }}
               />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Item 1: 1 DSA Problem */}
-          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+        <div className="space-y-2">
+          {/* 1. DSA Problem */}
+          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
             solvedDsaToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-[#090b10] border-white/5 hover:border-blue-500/30'
+              ? 'bg-emerald-500/5 border-emerald-500/25' 
+              : 'bg-black/30 border-white/5 hover:border-blue-500/30'
           }`}>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Brain size={14} /> 1. DSA Problem
-                </span>
-                {solvedDsaToday ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
-                    <CheckCircle2 size={10} /> Solved
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                    {dsaFocusProblem?.pattern || 'Pattern'}
-                  </span>
-                )}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                solvedDsaToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+              }`}>
+                {solvedDsaToday ? <Check size={12} /> : '1'}
               </div>
-              
-              <div className="text-sm font-bold text-white mb-1">
-                {dsaFocusProblem?.name || 'Two Sum'}
+              <div className="truncate">
+                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
+                  <span>DSA: {dsaFocusProblem?.name || 'Two Sum'}</span>
+                  {solvedDsaToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Solved</span>}
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono truncate">
+                  {dsaFocusProblem?.pattern || 'Pattern'} • {bottleneckTopic?.name || 'Topic'}
+                </div>
               </div>
-              <p className="text-[11px] text-gray-400 mb-3">
-                Topic: {bottleneckTopic?.name || 'Arrays & Hashing'}
-              </p>
             </div>
-
             <button
               onClick={() => setLogModalOpen(true)}
-              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-semibold text-xs border border-blue-500/30 flex-shrink-0 transition-colors"
             >
-              <PlusCircle size={13} />
-              <span>{solvedDsaToday ? 'Log Another Problem' : 'Solve & Log Problem'}</span>
+              {solvedDsaToday ? 'Log Another' : 'Solve & Log'}
             </button>
           </div>
 
-          {/* Item 2: Tech Sprint */}
-          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+          {/* 2. Tech Focus */}
+          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
             loggedTechToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-[#090b10] border-white/5 hover:border-purple-500/30'
+              ? 'bg-emerald-500/5 border-emerald-500/25' 
+              : 'bg-black/30 border-white/5 hover:border-purple-500/30'
           }`}>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Code size={14} /> 2. 45-Min Tech Learning
-                </span>
-                {loggedTechToday ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
-                    <CheckCircle2 size={10} /> Logged
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                    Deep Work
-                  </span>
-                )}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                loggedTechToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+              }`}>
+                {loggedTechToday ? <Check size={12} /> : '2'}
               </div>
-
-              <div className="text-sm font-bold text-white mb-1 truncate">
-                {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Java 21 Concurrency'}
+              <div className="truncate">
+                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
+                  <span>Tech: {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Java 21 Concurrency'}</span>
+                  {loggedTechToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Logged</span>}
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono truncate">
+                  {activeSprint?.technology || 'Java 21'} • 45m deep focus
+                </div>
               </div>
-              <p className="text-[11px] text-gray-400 mb-3 truncate">
-                Sprint: {activeSprint?.technology || 'Java 21 Backend'}
-              </p>
             </div>
-
             <button
               onClick={() => navigate('/sprint')}
-              className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 flex-shrink-0 transition-colors"
             >
-              <span>{loggedTechToday ? 'View Sprint Progress' : 'Open Sprint & Log'}</span>
-              <ArrowRight size={13} />
+              {loggedTechToday ? 'View' : 'Open'}
             </button>
           </div>
 
-          {/* Item 3: 5-Min Speech Practice */}
-          <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+          {/* 3. Speech Studio */}
+          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
             loggedCommToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-[#090b10] border-white/5 hover:border-emerald-500/30'
+              ? 'bg-emerald-500/5 border-emerald-500/25' 
+              : 'bg-black/30 border-white/5 hover:border-emerald-500/30'
           }`}>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Mic size={14} /> 3. 5-Min Speech Studio
-                </span>
-                {loggedCommToday ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold flex items-center gap-1">
-                    <CheckCircle2 size={10} /> Spoken
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                    Articulation
-                  </span>
-                )}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                loggedCommToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+              }`}>
+                {loggedCommToday ? <Check size={12} /> : '3'}
               </div>
-
-              <div className="text-sm font-bold text-white mb-1 truncate">
-                Explain: {dsaFocusProblem?.name || 'Two Sum'} Intuition
+              <div className="truncate">
+                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
+                  <span>Speech: Explain {dsaFocusProblem?.name || 'Two Sum'}</span>
+                  {loggedCommToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Spoken</span>}
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono truncate">
+                  5 min verbal intuition practice
+                </div>
               </div>
-              <p className="text-[11px] text-gray-400 mb-3">
-                Practice explaining trade-offs aloud in English
-              </p>
             </div>
-
             <button
               onClick={() => navigate('/communication')}
-              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors"
             >
-              <Mic size={13} />
-              <span>{loggedCommToday ? 'Practice More Topics' : 'Open Speech Studio'}</span>
+              {loggedCommToday ? 'Practice More' : 'Speak'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Due Revisions Alert Strip */}
+      {/* Due Revisions Alert (If Any) */}
       {dueRevisions.length > 0 && (
-        <div className="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300">
-              <Clock size={20} />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm">
-                {dueRevisions.length} Spaced Repetition {dueRevisions.length === 1 ? 'Revision' : 'Revisions'} Due Today
-              </h3>
-              <p className="text-xs text-gray-300 mt-0.5">
-                Next scheduled review: <strong>{dueRevisions[0]?.problemName}</strong> ({dueRevisions[0]?.pattern}).
-              </p>
+        <div className="p-3 sm:p-4 rounded-xl bg-purple-950/30 border border-purple-500/30 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Clock size={16} className="text-purple-400 flex-shrink-0" />
+            <div className="truncate text-xs">
+              <span className="font-bold text-white">{dueRevisions.length} Revision Due Today</span>
+              <span className="text-gray-400 ml-1.5 hidden sm:inline">({dueRevisions[0]?.problemName})</span>
             </div>
           </div>
           <button 
             onClick={() => navigate('/dsa')}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center gap-1 flex-shrink-0 shadow-lg shadow-purple-500/25"
+            className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex-shrink-0"
           >
-            <span>Review Now</span>
-            <ArrowRight size={13} />
+            Review
           </button>
         </div>
       )}
 
-      {/* Today's Timetable Section */}
-      <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/10 space-y-4">
+      {/* Compact Timetable Glance */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-sky-400" />
-            <div>
-              <h3 className="font-extrabold text-white text-sm md:text-base">
-                Today's Daily Timetable ({todayName})
-              </h3>
-              <p className="text-[11px] text-gray-400">
-                {todaySchedule.length} time blocks • High-leverage structured routine
-              </p>
-            </div>
+            <Calendar size={15} className="text-sky-400" />
+            <h3 className="font-bold text-white text-xs sm:text-sm font-mono uppercase tracking-wider">
+              Today's Schedule ({todayName})
+            </h3>
           </div>
           <button 
             onClick={() => navigate('/schedule')}
-            className="text-xs text-blue-400 hover:text-blue-300 font-semibold px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 transition-colors"
+            className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20"
           >
-            Manage Timetable
+            Full Timetable
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
           {todaySchedule.length === 0 ? (
-            <p className="col-span-full text-xs text-gray-500 py-6 text-center">No blocks defined for {todayName}. Click Manage Timetable to configure.</p>
+            <p className="col-span-full text-xs text-gray-500 py-3 text-center">No blocks set for {todayName}.</p>
           ) : (
             todaySchedule.map((block, idx) => {
               const badgeColor = 
-                block.category === 'study' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
-                block.category === 'gym' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                block.category === 'work' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
-                'text-gray-400 bg-white/5 border-white/10';
+                block.category === 'study' ? 'text-blue-400 bg-blue-500/10' :
+                block.category === 'gym' ? 'text-orange-400 bg-orange-500/10' :
+                block.category === 'work' ? 'text-amber-400 bg-amber-500/10' :
+                'text-gray-400 bg-white/5';
 
               return (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-[#090b10] border border-white/5 hover:border-white/10 transition-colors">
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/40 border border-white/5 text-xs">
                   <div className="flex items-center gap-2 truncate mr-2">
-                    <span className="font-mono text-[11px] font-semibold text-gray-400 flex-shrink-0">{block.time}</span>
-                    <span className="text-xs font-medium text-white truncate">{block.activity}</span>
+                    <span className="font-mono text-[10px] text-gray-400 flex-shrink-0">{block.time}</span>
+                    <span className="font-medium text-white truncate">{block.activity}</span>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border capitalize flex-shrink-0 ${badgeColor}`}>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase flex-shrink-0 ${badgeColor}`}>
                     {block.category}
                   </span>
                 </div>
@@ -616,39 +551,30 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
       </div>
 
-      {/* Habit Shortcuts Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Habit 1-Tap Shortcuts */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <button 
           onClick={() => navigate('/journal')}
-          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-sky-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-sky-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
         >
-          <span className="flex items-center gap-2 font-medium">
-            <CheckCircle2 size={15} className="text-sky-400" />
-            <span>Engineering Journal</span>
-          </span>
-          <ArrowRight size={13} className="text-gray-500" />
+          <CheckCircle2 size={14} className="text-sky-400" />
+          <span className="truncate">Journal</span>
         </button>
 
         <button 
           onClick={() => navigate('/gym')}
-          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-emerald-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-orange-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
         >
-          <span className="flex items-center gap-2 font-medium">
-            <Activity size={15} className="text-emerald-400" />
-            <span>Gym Check-In</span>
-          </span>
-          <ArrowRight size={13} className="text-gray-500" />
+          <Dumbbell size={14} className="text-orange-400" />
+          <span className="truncate">Gym Log</span>
         </button>
 
         <button 
           onClick={() => navigate('/review')}
-          className="p-3.5 rounded-2xl bg-[#090b10] hover:bg-white/5 border border-white/5 hover:border-purple-500/30 flex items-center justify-between text-xs text-gray-200 transition-all"
+          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-purple-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
         >
-          <span className="flex items-center gap-2 font-medium">
-            <ShieldCheck size={15} className="text-purple-400" />
-            <span>Weekly Review</span>
-          </span>
-          <ArrowRight size={13} className="text-gray-500" />
+          <ShieldCheck size={14} className="text-purple-400" />
+          <span className="truncate">Review</span>
         </button>
       </div>
 
