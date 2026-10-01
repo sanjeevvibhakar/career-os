@@ -220,6 +220,59 @@ app.get('/api/dashboard/today', (req, res) => {
   });
 });
 
+let latestSnapshot: any = null;
+
+// 5. Cross-Device Cloud Sync Endpoints (Laptop <-> Phone)
+app.post('/api/sync/push', async (req, res) => {
+  const snapshot = req.body;
+  latestSnapshot = {
+    ...snapshot,
+    syncedAt: new Date().toISOString(),
+  };
+
+  if (pool) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS cloud_snapshots (
+          id VARCHAR(32) PRIMARY KEY,
+          payload JSONB NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO cloud_snapshots (id, payload, updated_at)
+        VALUES ('primary', $1, CURRENT_TIMESTAMP)
+        ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP;
+      `, [JSON.stringify(latestSnapshot)]);
+    } catch (err) {
+      console.warn('Postgres snapshot backup warning:', err);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'Data successfully backed up to cloud!',
+    timestamp: latestSnapshot.syncedAt,
+  });
+});
+
+app.get('/api/sync/pull', async (req, res) => {
+  if (pool) {
+    try {
+      const dbRes = await pool.query('SELECT payload FROM cloud_snapshots WHERE id = $1', ['primary']);
+      if (dbRes.rows.length > 0) {
+        return res.json({ success: true, data: dbRes.rows[0].payload });
+      }
+    } catch (err) {
+      console.warn('Postgres snapshot read warning:', err);
+    }
+  }
+
+  if (latestSnapshot) {
+    return res.json({ success: true, data: latestSnapshot });
+  }
+
+  res.status(404).json({ success: false, message: 'No cloud snapshot found.' });
+});
+
 // Boot Server
 app.listen(PORT, async () => {
   console.log(`🚀 Career OS Production API running on port ${PORT}`);

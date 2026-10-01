@@ -1,0 +1,16 @@
+{
+  "short_name": "Career OS",
+  "name": "Career OS - Sanjeev Vibhakar",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/dashboard",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "display": "standalone",
+  "orientation": "portrait"
+}

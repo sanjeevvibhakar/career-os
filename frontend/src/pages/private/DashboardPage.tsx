@@ -14,8 +14,13 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   Brain, Code, Mic, Activity, CheckCircle2, Clock, 
-  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle
+  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle,
+  Cloud, Smartphone, Laptop, RefreshCw, Check
 } from 'lucide-react';
+import { 
+  getSavedCloudUrl, setSavedCloudUrl, testCloudHealth, 
+  syncPushToCloud, syncPullFromCloud 
+} from '../../services/cloudSync';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -37,6 +42,44 @@ export const DashboardPage: React.FC = () => {
     lesson: '',
     confidence: 4,
   });
+
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [cloudUrl, setCloudUrl] = useState(getSavedCloudUrl());
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleTestCloud = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Pinging backend server...');
+    const ok = await testCloudHealth(cloudUrl);
+    setSyncLoading(false);
+    if (ok) {
+      setSyncMessage('✓ Cloud Backend is ONLINE and responding!');
+    } else {
+      setSyncMessage('⚠️ Cloud Backend is asleep or unreachable. Render wakes up in ~30s if sleeping.');
+    }
+  };
+
+  const handlePush = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Uploading local data to cloud database...');
+    setSavedCloudUrl(cloudUrl);
+    const res = await syncPushToCloud(cloudUrl);
+    setSyncLoading(false);
+    setSyncMessage(res.message);
+  };
+
+  const handlePull = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Downloading latest cloud data to this device...');
+    setSavedCloudUrl(cloudUrl);
+    const res = await syncPullFromCloud(cloudUrl);
+    setSyncLoading(false);
+    setSyncMessage(res.message);
+    if (res.success) {
+      setTimeout(() => window.location.reload(), 1200);
+    }
+  };
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -133,6 +176,14 @@ export const DashboardPage: React.FC = () => {
 
         {/* Backup & Actions Bar */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button 
+            onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
+            className="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <Cloud size={14} className="text-blue-400 animate-pulse" />
+            <span>Phone & Laptop Sync</span>
+          </button>
+
           <button 
             onClick={handleExportBackup}
             className="px-3.5 py-2 rounded-xl glass-panel text-xs font-medium text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors border border-white/5"
@@ -450,6 +501,88 @@ export const DashboardPage: React.FC = () => {
           <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
             <Button variant="ghost" onClick={() => setLogModalOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveDsaAttempt}>Save Solution & Schedule Revisions</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cloud Sync & Phone Pairing Modal */}
+      <Modal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        title="Cross-Device Cloud Sync (Phone & Laptop)"
+      >
+        <div className="space-y-6">
+          <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 leading-relaxed flex items-start gap-3">
+            <Smartphone size={24} className="flex-shrink-0 text-blue-400 mt-0.5" />
+            <div>
+              <strong className="text-white block text-sm mb-1">How Cross-Device Sync Works:</strong>
+              When you push your data to the cloud on your laptop, you can immediately pull it on your phone so both devices stay 100% in sync without losing a single problem, journal, or streak.
+            </div>
+          </div>
+
+          {/* Backend Connection */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#090b10] border border-white/5">
+            <label className="text-xs font-semibold text-gray-300 block">
+              Cloud Backend API Endpoint
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={cloudUrl}
+                onChange={(e) => setCloudUrl(e.target.value)}
+                placeholder="https://career-os-backend.onrender.com"
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={handleTestCloud}
+                disabled={syncLoading}
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-gray-300 font-medium transition-colors"
+              >
+                Test Ping
+              </button>
+            </div>
+          </div>
+
+          {/* Push & Pull Actions */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={handlePush}
+              disabled={syncLoading}
+              className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-500/20 flex flex-col items-center justify-center gap-2 text-center"
+            >
+              <Upload size={18} />
+              <span>Push to Cloud (Laptop ➔ Cloud)</span>
+              <span className="text-[10px] text-blue-200 font-normal">Back up this device to server</span>
+            </button>
+
+            <button
+              onClick={handlePull}
+              disabled={syncLoading}
+              className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-purple-500/20 flex flex-col items-center justify-center gap-2 text-center"
+            >
+              <Download size={18} />
+              <span>Pull to Device (Cloud ➔ Phone)</span>
+              <span className="text-[10px] text-purple-200 font-normal">Sync latest progress to this device</span>
+            </button>
+          </div>
+
+          {syncMessage && (
+            <div className={`p-3 rounded-xl text-xs ${syncMessage.includes('✓') ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : syncMessage.includes('⚠️') ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-blue-500/10 text-blue-300 border border-blue-500/20'}`}>
+              {syncMessage}
+            </div>
+          )}
+
+          {/* Instant Offline Snapshot Alternative */}
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
+            <span>Offline file alternative:</span>
+            <div className="flex gap-2">
+              <button onClick={handleExportBackup} className="text-sky-400 hover:underline">Download JSON</button>
+              <span>•</span>
+              <label className="text-purple-400 hover:underline cursor-pointer">
+                Restore JSON
+                <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+              </label>
+            </div>
           </div>
         </div>
       </Modal>
