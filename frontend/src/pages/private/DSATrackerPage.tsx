@@ -12,15 +12,17 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { CURRICULUM_LEVELS } from '../../data/curriculumData';
 import { DSA_PROBLEMS, DSA_TOPICS } from '../../data/dsaProblems';
 import { soundService } from '../../services/soundService';
+import { InterviewReadinessModal } from '../../components/shared/InterviewReadinessModal';
 import { 
   Search, ExternalLink, Filter, CheckCircle2, RotateCw, PlusCircle, Check,
-  Sparkles, Building2, Target, Award, Lock, BookOpen, Layers, X, SlidersHorizontal
+  Sparkles, Building2, Target, Award, Lock, BookOpen, Layers, X, SlidersHorizontal, Zap
 } from 'lucide-react';
 
 export const DSATrackerPage: React.FC = () => {
   const dsaStore = useDsaStore();
   const dashboardStore = useDashboardStore();
   
+  const [readinessHubOpen, setReadinessHubOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'levels' | 'topics' | 'revisions' | 'stats'>('levels');
   const [selectedLevelNum, setSelectedLevelNum] = useState<number>(0);
   const [expandedTopic, setExpandedTopic] = useState<number | null>(1); // Default open first topic
@@ -147,15 +149,24 @@ export const DSATrackerPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Global Stats Summary */}
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-xl glass-panel text-center">
-            <span className="text-xs text-[var(--text-secondary)] block">Solved</span>
-            <span className="text-lg font-bold text-sky-400">{stats.totalSolved} / {stats.totalProblems}</span>
+        {/* Global Stats Summary & Pattern Hub */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => setReadinessHubOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
+            title="Open 15-Pattern Matrix & Interview Traps"
+          >
+            <Zap size={14} className="text-amber-400" />
+            <span>Pattern Hub</span>
+          </button>
+
+          <div className="px-3 sm:px-4 py-2 rounded-xl glass-panel text-center">
+            <span className="text-[11px] sm:text-xs text-[var(--text-secondary)] block">Solved</span>
+            <span className="text-base sm:text-lg font-bold text-sky-400">{stats.totalSolved} / {stats.totalProblems}</span>
           </div>
-          <div className="px-4 py-2 rounded-xl glass-panel text-center">
-            <span className="text-xs text-[var(--text-secondary)] block">Mastery</span>
-            <span className="text-lg font-bold text-emerald-400">
+          <div className="px-3 sm:px-4 py-2 rounded-xl glass-panel text-center">
+            <span className="text-[11px] sm:text-xs text-[var(--text-secondary)] block">Mastery</span>
+            <span className="text-base sm:text-lg font-bold text-emerald-400">
               {stats.totalProblems > 0 ? Math.round((stats.totalSolved / stats.totalProblems) * 100) : 0}%
             </span>
           </div>
@@ -894,6 +905,13 @@ export const DSATrackerPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Tier-1 Pattern Mastery & Interview Readiness Hub */}
+      <InterviewReadinessModal
+        isOpen={readinessHubOpen}
+        onClose={() => setReadinessHubOpen(false)}
+        onSelectProblemForLog={(prob) => handleOpenLogModal(prob)}
+      />
     </div>
   );
 };

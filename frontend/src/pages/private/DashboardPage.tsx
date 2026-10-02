@@ -9,6 +9,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
 import { RoadmapModal } from '../../components/dashboard/RoadmapModal';
 import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
+import { InterviewReadinessModal } from '../../components/shared/InterviewReadinessModal';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
@@ -22,7 +23,7 @@ import {
   Brain, Code, Mic, CheckCircle2, Clock, 
   Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, Dumbbell,
   Check, Smartphone, Settings, Sparkles, Map, Target, Briefcase, ExternalLink, Share2, Copy,
-  Volume2, VolumeX
+  Volume2, VolumeX, Zap
 } from 'lucide-react';
 import { soundService } from '../../services/soundService';
 import { 
@@ -48,6 +49,7 @@ export const DashboardPage: React.FC = () => {
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [roadmapOpen, setRoadmapOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
+  const [readinessHubOpen, setReadinessHubOpen] = useState(false);
   const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
   const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
 
@@ -291,6 +293,17 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
 
         {/* Header Actions */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto justify-start sm:justify-end">
+          {/* Tier-1 Interview Hub */}
+          <button
+            onClick={() => setReadinessHubOpen(true)}
+            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
+            title="Open Tier-1 Interview Readiness & Pattern Matrix"
+          >
+            <Zap size={13} className="text-amber-400" />
+            <span className="inline">Interview Hub</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 font-mono">{godMode.readinessScore}%</span>
+          </button>
+
           {/* Master Roadmap Button */}
           <button
             onClick={() => setRoadmapOpen(true)}
@@ -360,18 +373,19 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* KPI 1: Master Level & Readiness */}
         <div 
-          onClick={() => setRoadmapOpen(true)}
-          className="glass-panel p-3.5 rounded-xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
+          onClick={() => setReadinessHubOpen(true)}
+          className="glass-panel p-3.5 rounded-xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
+          title="Click to view Tier-1 Interview Readiness & Pattern Matrix"
         >
-          <div className="flex items-center justify-between text-[11px] text-blue-400 font-bold font-mono">
-            <span className="flex items-center gap-1"><Sparkles size={13} /> MASTER ROADMAP</span>
+          <div className="flex items-center justify-between text-[11px] text-purple-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Sparkles size={13} /> INTERVIEW READINESS</span>
             <span>{godMode.readinessScore}% Ready</span>
           </div>
           <div className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono mt-1 truncate">
             Level {currentLevel}: {currentLevelData.title.split('&')[0]}
           </div>
-          <div className="text-[10px] text-[var(--text-secondary)] mt-0.5 font-mono truncate">
-            {currentLevelData.subtitle}
+          <div className="text-[10px] text-purple-400/80 mt-0.5 font-mono truncate">
+            15 Patterns & Tech Traps ↗
           </div>
         </div>
 
@@ -777,6 +791,16 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             setRoadmapOpen(false);
             setLogModalOpen(true);
           }
+        }}
+      />
+
+      {/* Tier-1 Interview Readiness & Practice Hub */}
+      <InterviewReadinessModal
+        isOpen={readinessHubOpen}
+        onClose={() => setReadinessHubOpen(false)}
+        onSelectProblemForLog={(prob) => {
+          setSelectedModalProblem(prob);
+          setLogModalOpen(true);
         }}
       />
 
