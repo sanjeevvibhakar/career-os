@@ -134,13 +134,17 @@ export interface Dashboard {
 
 // Weekly Review
 export interface WeeklyReview {
-  id: number; weekStartDate: string;
+  id: number | string; weekStartDate: string;
   dsaProblemsSolved: number; dsaAccuracy: number;
   techHours: number; projectHours: number;
   gymSessions: number; sleepAvg: number;
   biggestWin: string; biggestStruggle: string;
   nextWeekFocus: string; nextWeekDsaTheme: string;
   nextWeekTechTheme: string; notes: string;
+  syllabusTopicsCount?: number;
+  commSessionsCount?: number;
+  adherenceScore?: number;
+  journalDaysCount?: number;
 }
 
 // API wrapper

@@ -24,6 +24,10 @@ interface WeeklyReview {
   nextWeekTechTheme: string;
   notes: string;
   createdAt: string;
+  syllabusTopicsCount?: number;
+  commSessionsCount?: number;
+  adherenceScore?: number;
+  journalDaysCount?: number;
 }
 
 interface DashboardState {
