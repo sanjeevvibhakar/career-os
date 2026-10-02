@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { soundService } from '../../services/soundService';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -33,10 +34,11 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    // Tactile haptic feedback
+    // Tactile haptic & audio feedback
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(15);
     }
+    soundService.playTapClick();
     if (onClick) {
       onClick(e);
     }

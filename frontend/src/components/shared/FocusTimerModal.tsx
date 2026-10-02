@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Play, Pause, RotateCcw, Brain, Coffee, Sparkles, CheckCircle2 } from 'lucide-react';
+import { soundService } from '../../services/soundService';
 
 interface FocusTimerModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export const FocusTimerModal: React.FC<FocusTimerModalProps> = ({
       }, 1000);
     } else if (timeLeftSec === 0 && isRunning) {
       setIsRunning(false);
+      soundService.playFocusGong();
       const updated = completedSessions + 1;
       setCompletedSessions(updated);
       localStorage.setItem('career_os_completed_timers', updated.toString());

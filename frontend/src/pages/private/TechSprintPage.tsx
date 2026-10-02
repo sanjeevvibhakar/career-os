@@ -7,6 +7,7 @@ import {
 import { SYLLABUS_WEEKS, SYLLABUS_DATA, type SyllabusDayItem } from '../../data/syllabusData';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { soundService } from '../../services/soundService';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const TechSprintPage: React.FC = () => {
@@ -19,7 +20,7 @@ export const TechSprintPage: React.FC = () => {
   const pace = syllabusStore.getPaceAnalysis();
   const nextItem = syllabusStore.getNextPendingItem();
 
-  // Handle 1-click toggle with vibration and streak update
+  // Handle 1-click toggle with vibration, sound, and streak update
   const handleToggle = (itemId: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(20);
@@ -27,6 +28,7 @@ export const TechSprintPage: React.FC = () => {
     const wasCompleted = syllabusStore.isCompleted(itemId);
     syllabusStore.toggleItem(itemId);
     if (!wasCompleted) {
+      soundService.playCheckSound();
       dashboardStore.updateStreak('learning');
     }
   };

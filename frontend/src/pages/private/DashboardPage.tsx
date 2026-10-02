@@ -21,8 +21,10 @@ import { getRoutineForToday } from '../../data/gymData';
 import { 
   Brain, Code, Mic, CheckCircle2, Clock, 
   Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, Dumbbell,
-  Check, Smartphone, Settings, Sparkles, Map, Target, Briefcase, ExternalLink, Share2, Copy
+  Check, Smartphone, Settings, Sparkles, Map, Target, Briefcase, ExternalLink, Share2, Copy,
+  Volume2, VolumeX
 } from 'lucide-react';
+import { soundService } from '../../services/soundService';
 import { 
   getSavedCloudUrl, setSavedCloudUrl, testCloudHealth, 
   syncPushToCloud, syncPullFromCloud, getExportSnapshot, importSnapshotString
@@ -47,6 +49,14 @@ export const DashboardPage: React.FC = () => {
   const [roadmapOpen, setRoadmapOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
   const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
+  const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    soundService.setEnabled(next);
+    setSoundEnabled(next);
+    if (next) soundService.playCheckSound();
+  };
 
   const [attemptForm, setAttemptForm] = useState({
     timeTakenMin: 30,
@@ -300,6 +310,20 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           >
             <Clock size={13} />
             <span className="hidden md:inline">Focus</span>
+          </button>
+
+          {/* Tactile Audio Toggle */}
+          <button
+            onClick={toggleSound}
+            className={`p-1.5 rounded-xl border flex items-center justify-center transition-all ${
+              soundEnabled
+                ? 'bg-blue-600/15 text-blue-400 border-blue-500/30 hover:bg-blue-600/25'
+                : 'bg-white/5 text-gray-500 border-white/10 hover:text-gray-300'
+            }`}
+            title={soundEnabled ? 'Sound Effects Enabled (Click to Mute)' : 'Sound Effects Muted (Click to Enable)'}
+            aria-label="Toggle Sound Effects"
+          >
+            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
 
           {/* Cloud Sync Status */}

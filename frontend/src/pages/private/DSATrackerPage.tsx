@@ -11,6 +11,7 @@ import { useDsaStore } from '../../stores/dsaStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { CURRICULUM_LEVELS } from '../../data/curriculumData';
 import { DSA_PROBLEMS, DSA_TOPICS } from '../../data/dsaProblems';
+import { soundService } from '../../services/soundService';
 import { 
   Search, ExternalLink, Filter, CheckCircle2, RotateCw, PlusCircle, Check,
   Sparkles, Building2, Target, Award, Lock, BookOpen, Layers, X, SlidersHorizontal
@@ -119,6 +120,7 @@ export const DSATrackerPage: React.FC = () => {
     if (!selectedProblem) return;
     dsaStore.logAttempt(selectedProblem.id, formData);
     dashboardStore.updateStreak('dsa');
+    soundService.playSuccessChime();
     setLogModalOpen(false);
   };
 
@@ -126,6 +128,7 @@ export const DSATrackerPage: React.FC = () => {
     if (!selectedRevision) return;
     dsaStore.completeRevision(selectedRevision.id, revisionTime, revisionConfidence);
     dashboardStore.updateStreak('dsa');
+    soundService.playCheckSound();
     setRevisionModalOpen(false);
   };
 
