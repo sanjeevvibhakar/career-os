@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
 import { RoadmapModal } from '../../components/dashboard/RoadmapModal';
+import { DailyBattleBoard } from '../../components/dashboard/DailyBattleBoard';
 import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
 import { InterviewReadinessModal } from '../../components/shared/InterviewReadinessModal';
 import { useDsaStore } from '../../stores/dsaStore';
@@ -522,194 +523,19 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
       </div>
 
-      {/* 3. TODAY'S MISSION: The 5 Non-Negotiable Goals */}
-      <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-white/10 space-y-3 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-emerald-400" />
-            <h2 className="text-xs sm:text-sm font-black text-[var(--text-primary)] uppercase tracking-wider font-mono">
-              Today's Mission (What To Do Today)
-            </h2>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold text-emerald-400 font-mono">
-              {completedGoalsCount}/5 Completed
-            </span>
-            <div className="w-16 h-2 rounded-full bg-white/10 overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300" 
-                style={{ width: `${(completedGoalsCount / 5) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 5 Distinct Goal Rows */}
-        <div className="space-y-2 pt-1">
-          {/* Goal 1: Morning DSA Problem */}
-          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-            solvedDsaToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-blue-500/30'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                solvedDsaToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
-              }`}>
-                {solvedDsaToday ? <Check size={13} /> : '1'}
-              </div>
-              <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>DSA: {dsaFocusProblem?.name || 'Two Sum'}</span>
-                  {solvedDsaToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Solved</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  {dsaFocusProblem?.difficulty || 'EASY'} • {dsaFocusProblem?.pattern || 'Hash Map'} • {bottleneckTopic?.name || 'Arrays'}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setSelectedModalProblem(dsaFocusProblem);
-                setLogModalOpen(true);
-              }}
-              className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-bold text-xs border border-blue-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {solvedDsaToday ? 'Log Another' : 'Solve & Log'}
-            </button>
-          </div>
-
-          {/* Goal 2: Workday Synergy Goal */}
-          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-            loggedJournalToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-sky-500/30'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                loggedJournalToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
-              }`}>
-                {loggedJournalToday ? <Check size={13} /> : '2'}
-              </div>
-              <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>Workday: {currentLevelData.practicalWorkAction.split(';')[0]}</span>
-                  {loggedJournalToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Logged</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  Current Company Growth • Apply to your job codebase & log reflections
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/journal')}
-              className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 font-bold text-xs border border-sky-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {loggedJournalToday ? 'View Entry' : 'Log Journal'}
-            </button>
-          </div>
-
-          {/* Goal 3: Evening Tech Syllabus */}
-          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-            loggedTechToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-purple-500/30'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                loggedTechToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
-              }`}>
-                {loggedTechToday ? <Check size={13} /> : '3'}
-              </div>
-              <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>Tech: {nextSyllabusItem ? `W${nextSyllabusItem.weekNumber}D${nextSyllabusItem.dayNumber} — ${nextSyllabusItem.subtopic}` : 'All 8 Weeks Completed!'}</span>
-                  {loggedTechToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Completed</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  Pace: {syllabusPace.statusLabel} • {syllabusPace.completedCount}/40 Done • 45m deep architecture study
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/sprint')}
-              className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {loggedTechToday ? 'View Syllabus' : 'Study & Mark Done'}
-            </button>
-          </div>
-
-          {/* Goal 4: Speech Studio Practice */}
-          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-            loggedCommToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-emerald-500/30'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                loggedCommToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
-              }`}>
-                {loggedCommToday ? <Check size={13} /> : '4'}
-              </div>
-              <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>Speech: Explain {dsaFocusProblem?.name || 'Two Sum'}</span>
-                  {loggedCommToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Recorded</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  5 min verbal walkthrough out loud • Simulating Tier-1 interview dialogue
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/communication')}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {loggedCommToday ? 'Practice More' : 'Record Speech'}
-            </button>
-          </div>
-
-          {/* Goal 5: Daily Gym Workout */}
-          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-            loggedGymToday 
-              ? 'bg-emerald-500/5 border-emerald-500/30' 
-              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-orange-500/30'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                loggedGymToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
-              }`}>
-                {loggedGymToday ? <Check size={13} /> : '5'}
-              </div>
-              <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>Gym: {todayRoutine.title}</span>
-                  {loggedGymToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Finished</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  {todayRoutine.estimatedMinutes} mins • {todayRoutine.description.split('.')[0]}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/gym')}
-              className="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 font-bold text-xs border border-orange-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {loggedGymToday ? 'View Workout' : 'Track Gym'}
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* 3. Daily Battle Board (5 Disciplines, 1-Tap Quick Actions & Modals) */}
+      <DailyBattleBoard
+        dsaFocusProblem={dsaFocusProblem}
+        bottleneckTopic={bottleneckTopic}
+        nextSyllabusItem={nextSyllabusItem}
+        syllabusPace={syllabusPace}
+        todayRoutine={todayRoutine}
+        currentLevelData={currentLevelData}
+        onOpenDsaModal={(problem) => {
+          setSelectedModalProblem(problem || dsaFocusProblem);
+          setLogModalOpen(true);
+        }}
+      />
 
       {/* 4. Spaced Repetition Due Alert (Conditional) */}
       {dueRevisions.length > 0 && (
