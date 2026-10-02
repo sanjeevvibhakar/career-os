@@ -63,8 +63,8 @@ export const WeeklyReviewPage: React.FC = () => {
     setAiLoading(true);
     try {
       const context = {
-        journalEntries: dailyStore.journalEntries.filter(j => j.date >= weekStartDate).map(j => j.whatLearned),
-        dsaMistakes: dsaAttempts.map(a => a.mistake).filter(m => m),
+        journalEntries: dailyStore.journals.filter((j: any) => j.date >= weekStartDate).map((j: any) => j.whatLearned),
+        dsaMistakes: dsaAttempts.map((a: any) => a.mistake).filter((m: any) => m),
         techHours,
         gymSessions,
         sleepAvg: formData.sleepAvg
