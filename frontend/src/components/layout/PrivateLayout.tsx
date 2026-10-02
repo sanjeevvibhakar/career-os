@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   Home, Brain, Code, BookOpen, Mic, Calendar, 
-  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight, Dumbbell, Sparkles
+  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight, Dumbbell, Sparkles, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { ThemeToggle } from '../shared/ThemeToggle';
@@ -32,6 +32,7 @@ export const PrivateLayout: React.FC = () => {
   // Habits & Review
   const secondaryNavItems = [
     { name: 'Pocket Flashcards', path: '/flashcards', icon: <Sparkles size={18} className="text-purple-400" /> },
+    { name: 'System Design', path: '/system-design', icon: <Building2 size={18} className="text-sky-400" /> },
     { name: 'Journal', path: '/journal', icon: <BookOpen size={18} /> },
     { name: 'Gym Tracker', path: '/gym', icon: <Dumbbell size={18} /> },
     { name: 'Weekly Review', path: '/review', icon: <BarChart size={18} /> },

@@ -26,6 +26,7 @@ import { GymPage } from './pages/private/GymPage';
 import { WeeklyReviewPage } from './pages/private/WeeklyReviewPage';
 import { ProfileEditPage } from './pages/private/ProfileEditPage';
 import { FlashcardsPage } from './pages/private/FlashcardsPage';
+import { SystemDesignPage } from './pages/private/SystemDesignPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -62,6 +63,7 @@ export const App: React.FC = () => {
           <Route path="/gym" element={<GymPage />} />
           <Route path="/review" element={<WeeklyReviewPage />} />
           <Route path="/flashcards" element={<FlashcardsPage />} />
+          <Route path="/system-design" element={<SystemDesignPage />} />
           <Route path="/profile" element={<ProfileEditPage />} />
         </Route>
       </Routes>
