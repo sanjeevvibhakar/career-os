@@ -31,6 +31,7 @@ export const PrivateLayout: React.FC = () => {
 
   // Habits & Review
   const secondaryNavItems = [
+    { name: 'Pocket Flashcards', path: '/flashcards', icon: <Sparkles size={18} className="text-purple-400" /> },
     { name: 'Journal', path: '/journal', icon: <BookOpen size={18} /> },
     { name: 'Gym Tracker', path: '/gym', icon: <Dumbbell size={18} /> },
     { name: 'Weekly Review', path: '/review', icon: <BarChart size={18} /> },
