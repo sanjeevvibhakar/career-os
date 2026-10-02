@@ -24,6 +24,7 @@ export const PublicNavbar: React.FC = () => {
             <Link to="/projects" className="text-[var(--text-secondary)] hover:text-white transition-colors">Projects</Link>
             <Link to="/skills" className="text-[var(--text-secondary)] hover:text-white transition-colors">Skills</Link>
             <Link to="/experience" className="text-[var(--text-secondary)] hover:text-white transition-colors">Experience</Link>
+            <Link to="/resume" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">Resume</Link>
             <Link to="/contact" className="text-[var(--text-secondary)] hover:text-white transition-colors">Contact</Link>
             
             <button
@@ -49,6 +50,7 @@ export const PublicNavbar: React.FC = () => {
             <Link to="/projects" className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-[var(--bg-card)]">Projects</Link>
             <Link to="/skills" className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-[var(--bg-card)]">Skills</Link>
             <Link to="/experience" className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-[var(--bg-card)]">Experience</Link>
+            <Link to="/resume" className="block px-3 py-2 rounded-md text-base font-medium text-blue-400 hover:text-blue-300 hover:bg-[var(--bg-card)]">Resume (ATS Print/PDF)</Link>
             <Link to="/contact" className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-[var(--bg-card)]">Contact</Link>
             <button
               onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}

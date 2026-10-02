@@ -36,6 +36,7 @@ export const PrivateLayout: React.FC = () => {
 
   const bottomItems = [
     { name: 'Edit Portfolio', path: '/profile', icon: <Edit size={18} /> },
+    { name: 'ATS Resume (PDF)', path: '/resume', icon: <ExternalLink size={18} /> },
     { name: 'Public Site', path: '/', icon: <ExternalLink size={18} /> },
   ];
 

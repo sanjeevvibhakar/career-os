@@ -128,3 +128,26 @@ code, pre, .font-mono {
 [data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Print optimization for 1-page ATS Resume */
+@media print {
+  @page {
+    margin: 8mm 12mm;
+    size: A4 portrait;
+  }
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: #0f172a !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .resume-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+}

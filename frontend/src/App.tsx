@@ -13,6 +13,7 @@ import { SkillsPage } from './pages/public/SkillsPage';
 import { ExperiencePage } from './pages/public/ExperiencePage';
 import { ContactPage } from './pages/public/ContactPage';
 import { LoginPage } from './pages/public/LoginPage';
+import { ResumePage } from './pages/public/ResumePage';
 
 // Private Pages
 import { DashboardPage } from './pages/private/DashboardPage';
@@ -42,6 +43,9 @@ export const App: React.FC = () => {
           <Route path="/experience" element={<ExperiencePage />} />
           <Route path="/contact" element={<ContactPage />} />
         </Route>
+
+        {/* ATS Resume View */}
+        <Route path="/resume" element={<ResumePage />} />
 
         {/* Auth */}
         <Route path="/login" element={<LoginPage />} />

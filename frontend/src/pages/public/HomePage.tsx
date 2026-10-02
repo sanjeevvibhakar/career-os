@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, Code, Database, Server, Terminal, Cpu, Layers, 
   CheckCircle, ShieldCheck, Sparkles, Activity, Lock, Zap, 
-  Flame, Clock, BarChart3, Cloud, GitBranch, ChevronRight
+  Flame, Clock, BarChart3, Cloud, GitBranch, ChevronRight, FileText
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useDsaStore } from '../../stores/dsaStore';
@@ -68,22 +68,30 @@ export const HomePage: React.FC = () => {
         </p>
 
         {/* Action CTAs */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-14">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-14">
           <Link 
             to="/projects" 
-            className="px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-xl shadow-blue-500/25 flex items-center gap-2.5 group"
+            className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all shadow-xl shadow-blue-500/25 flex items-center gap-2 group text-xs sm:text-sm"
           >
             <span>Explore System Architectures</span>
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          <Link 
+            to="/resume" 
+            className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-semibold transition-all flex items-center gap-2 shadow-md shadow-purple-600/10 text-xs sm:text-sm"
+          >
+            <FileText size={16} className="text-purple-400" />
+            <span>ATS Resume (1-Page PDF)</span>
           </Link>
 
           <button
             onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
-            className="px-7 py-3.5 rounded-xl glass-panel text-white font-medium hover:border-purple-500/40 hover:bg-purple-500/10 transition-all flex items-center gap-2.5 shadow-md"
+            className="px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl glass-panel text-white font-medium hover:border-purple-500/40 hover:bg-purple-500/10 transition-all flex items-center gap-2 shadow-md text-xs sm:text-sm"
           >
-            <Lock size={16} className="text-purple-400" />
+            <Lock size={15} className="text-purple-400" />
             <span>Launch Career OS</span>
-            <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">PIN: 1234</span>
+            <span className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">PIN: 1234</span>
           </button>
         </div>
 

@@ -23,7 +23,7 @@ import {
   Brain, Code, Mic, CheckCircle2, Clock, 
   Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, Dumbbell,
   Check, Smartphone, Settings, Sparkles, Map, Target, Briefcase, ExternalLink, Share2, Copy,
-  Volume2, VolumeX, Zap
+  Volume2, VolumeX, Zap, RefreshCw, Cloud, Wifi, WifiOff
 } from 'lucide-react';
 import { soundService } from '../../services/soundService';
 import { 
@@ -79,6 +79,23 @@ export const DashboardPage: React.FC = () => {
   const [showSettings, setShowSettings] = useState(!getSupabaseConfig().url || !getSupabaseConfig().anonKey);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [quickSyncing, setQuickSyncing] = useState(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(() => {
+    return localStorage.getItem('career-os-last-synced') || null;
+  });
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -183,6 +200,34 @@ export const DashboardPage: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
+  const handleQuickSync = async () => {
+    if (!supabaseUrl || !supabaseKey) {
+      setSyncModalOpen(true);
+      setSyncMessage('💡 Supabase not configured yet. Add your URL & Key below to enable 1-Click Cloud Sync across devices.');
+      return;
+    }
+    setQuickSyncing(true);
+    try {
+      setSupabaseConfig(supabaseUrl, supabaseKey);
+      const snapshot = getExportSnapshot();
+      const res = await pushToSupabase(snapshot);
+      if (res.success) {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLastSyncedTime(timeStr);
+        localStorage.setItem('career-os-last-synced', timeStr);
+        soundService.playCheckSound();
+      } else {
+        setSyncModalOpen(true);
+        setSyncMessage(`Sync warning: ${res.message}`);
+      }
+    } catch (e: any) {
+      setSyncModalOpen(true);
+      setSyncMessage(`Sync error: ${e?.message || 'Network request failed'}`);
+    } finally {
+      setQuickSyncing(false);
+    }
+  };
+
   const handlePushSupabase = async () => {
     setSyncLoading(true);
     setSyncMessage('Saving local progress to Supabase Cloud...');
@@ -191,6 +236,12 @@ export const DashboardPage: React.FC = () => {
     const res = await pushToSupabase(snapshot);
     setSyncLoading(false);
     setSyncMessage(res.message);
+    if (res.success) {
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSyncedTime(timeStr);
+      localStorage.setItem('career-os-last-synced', timeStr);
+      soundService.playCheckSound();
+    }
   };
 
   const handlePullSupabase = async () => {
@@ -292,11 +343,11 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto justify-start sm:justify-end">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto justify-start sm:justify-end flex-nowrap">
           {/* Tier-1 Interview Hub */}
           <button
             onClick={() => setReadinessHubOpen(true)}
-            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
+            className="shrink-0 px-3 py-1.5 rounded-xl font-bold text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
             title="Open Tier-1 Interview Readiness & Pattern Matrix"
           >
             <Zap size={13} className="text-amber-400" />
@@ -307,7 +358,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           {/* Master Roadmap Button */}
           <button
             onClick={() => setRoadmapOpen(true)}
-            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
+            className="shrink-0 px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
             title="View 6-Level Master Roadmap"
           >
             <Map size={13} />
@@ -318,7 +369,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           {/* 90/20 Focus Timer */}
           <button
             onClick={() => setTimerOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl font-mono text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 flex items-center gap-1.5 transition-all"
+            className="shrink-0 px-2.5 py-1.5 rounded-xl font-mono text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 flex items-center gap-1.5 transition-all"
             title="Start 90/20 Deep Work Focus Session"
           >
             <Clock size={13} />
@@ -328,7 +379,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           {/* Tactile Audio Toggle */}
           <button
             onClick={toggleSound}
-            className={`p-1.5 rounded-xl border flex items-center justify-center transition-all ${
+            className={`shrink-0 p-1.5 rounded-xl border flex items-center justify-center transition-all ${
               soundEnabled
                 ? 'bg-blue-600/15 text-blue-400 border-blue-500/30 hover:bg-blue-600/25'
                 : 'bg-white/5 text-gray-500 border-white/10 hover:text-gray-300'
@@ -339,30 +390,63 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
 
-          {/* Cloud Sync Status */}
-          <button 
-            onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
-            className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1.5 transition-all shadow-sm ${
-              supabaseUrl && supabaseKey 
-                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10'
-            }`}
-            title="Sync Phone & Cloud"
-          >
-            <span className={`w-2 h-2 rounded-full ${supabaseUrl && supabaseKey ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
-            <span className="hidden sm:inline">{supabaseUrl && supabaseKey ? 'Cloud' : 'Sync'}</span>
-          </button>
+          {/* Ambient Auto-Save & 1-Click Cloud Sync Pill */}
+          <div className="shrink-0 flex items-center bg-white/[0.04] border border-white/10 rounded-xl p-0.5 shadow-sm">
+            <button 
+              onClick={handleQuickSync}
+              disabled={quickSyncing}
+              className={`px-2.5 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-all ${
+                quickSyncing
+                  ? 'bg-blue-500/20 text-blue-300 animate-pulse'
+                  : supabaseUrl && supabaseKey
+                    ? 'text-emerald-400 hover:bg-emerald-500/10'
+                    : 'text-gray-300 hover:bg-white/10'
+              }`}
+              title={
+                !isOnline 
+                  ? 'Offline: Changes auto-saved locally' 
+                  : supabaseUrl && supabaseKey 
+                    ? `Click to 1-Click Cloud Sync (Last sync: ${lastSyncedTime || 'Never'})` 
+                    : 'Auto-Saved locally. Click to pair Supabase Cloud'
+              }
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${
+                !isOnline 
+                  ? 'bg-amber-400' 
+                  : quickSyncing 
+                    ? 'bg-blue-400 animate-ping' 
+                    : supabaseUrl && supabaseKey 
+                      ? 'bg-emerald-400 animate-pulse' 
+                      : 'bg-emerald-500'
+              }`} />
+              <RefreshCw size={12} className={`shrink-0 ${quickSyncing ? 'animate-spin text-blue-400' : 'text-gray-400'}`} />
+              <span className="hidden sm:inline font-sans font-medium text-[11px] whitespace-nowrap">
+                {quickSyncing 
+                  ? 'Syncing...' 
+                  : supabaseUrl && supabaseKey 
+                    ? (lastSyncedTime ? `Synced ${lastSyncedTime}` : 'Cloud Synced') 
+                    : 'Saved Locally'}
+              </span>
+            </button>
+            <button
+              onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Cloud Sync Settings & Phone Pairing"
+            >
+              <Settings size={13} />
+            </button>
+          </div>
 
           {/* Backup Buttons */}
           <button 
             onClick={handleExportBackup}
-            className="p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10"
+            className="shrink-0 p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10"
             title="Export JSON snapshot"
           >
             <Download size={14} className="text-sky-400" />
           </button>
 
-          <label className="p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10 cursor-pointer" title="Restore JSON snapshot">
+          <label className="shrink-0 p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10 cursor-pointer" title="Restore JSON snapshot">
             <Upload size={14} className="text-purple-400" />
             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
           </label>
