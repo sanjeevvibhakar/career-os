@@ -10,10 +10,10 @@ import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { CURRICULUM_LEVELS } from '../../data/curriculumData';
-import { DSA_PROBLEMS } from '../../data/dsaProblems';
+import { DSA_PROBLEMS, DSA_TOPICS } from '../../data/dsaProblems';
 import { 
   Search, ExternalLink, Filter, CheckCircle2, RotateCw, PlusCircle, Check,
-  Sparkles, Building2, Target, Award, Lock, BookOpen, Layers
+  Sparkles, Building2, Target, Award, Lock, BookOpen, Layers, X, SlidersHorizontal
 } from 'lucide-react';
 
 export const DSATrackerPage: React.FC = () => {
@@ -25,8 +25,60 @@ export const DSATrackerPage: React.FC = () => {
   const [expandedTopic, setExpandedTopic] = useState<number | null>(1); // Default open first topic
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'UNSOLVED' | 'SOLVED'>('ALL');
+  const [selectedPattern, setSelectedPattern] = useState<string>('ALL');
+  const [selectedSource, setSelectedSource] = useState<string>('ALL');
 
   const solvedProblemIds = useMemo(() => new Set(dsaStore.attempts.map(a => a.problemId)), [dsaStore.attempts]);
+
+  // Extract unique patterns
+  const allPatterns = useMemo(() => {
+    const set = new Set<string>();
+    DSA_PROBLEMS.forEach(p => {
+      if (p.pattern) set.add(p.pattern);
+    });
+    return Array.from(set).sort();
+  }, []);
+
+  const isFilterActive = 
+    searchQuery.trim() !== '' || 
+    selectedDifficulty !== 'ALL' || 
+    selectedStatus !== 'ALL' || 
+    selectedPattern !== 'ALL' || 
+    selectedSource !== 'ALL';
+
+  const searchResults = useMemo(() => {
+    if (!isFilterActive) return [];
+    const q = searchQuery.toLowerCase().trim();
+
+    return DSA_PROBLEMS.filter(p => {
+      const topic = DSA_TOPICS.find(t => t.id === p.topicId)?.name || '';
+      const isSolved = solvedProblemIds.has(p.id);
+
+      if (q) {
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchPattern = p.pattern.toLowerCase().includes(q);
+        const matchTopic = topic.toLowerCase().includes(q);
+        if (!matchName && !matchPattern && !matchTopic) return false;
+      }
+
+      if (selectedDifficulty !== 'ALL' && p.difficulty !== selectedDifficulty) return false;
+      if (selectedStatus === 'UNSOLVED' && isSolved) return false;
+      if (selectedStatus === 'SOLVED' && !isSolved) return false;
+      if (selectedPattern !== 'ALL' && p.pattern !== selectedPattern) return false;
+      if (selectedSource !== 'ALL' && p.source !== selectedSource) return false;
+
+      return true;
+    });
+  }, [isFilterActive, searchQuery, selectedDifficulty, selectedStatus, selectedPattern, selectedSource, solvedProblemIds]);
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedDifficulty('ALL');
+    setSelectedStatus('ALL');
+    setSelectedPattern('ALL');
+    setSelectedSource('ALL');
+  };
   
   // Attempt Logging Modal State
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -142,8 +194,202 @@ export const DSATrackerPage: React.FC = () => {
         </button>
       </div>
 
-      {/* 1. LEVELS TAB (BEGINNER TO ADVANCED ZERO-OVERWHELM SYLLABUS) */}
-      {activeTab === 'levels' && (() => {
+      {/* 2. Global Problem Search & Pattern Filters */}
+      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 space-y-3 shadow-md">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
+            <input 
+              type="text"
+              placeholder="Search problems by name, pattern (e.g. Sliding Window), or topic..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filter Selectors */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Filter */}
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as any)}
+              className="px-2.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-300 font-mono focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="ALL">All Status</option>
+              <option value="UNSOLVED">Unsolved Only</option>
+              <option value="SOLVED">Solved Only</option>
+            </select>
+
+            {/* Difficulty Filter */}
+            <select
+              value={selectedDifficulty}
+              onChange={(e) => setSelectedDifficulty(e.target.value)}
+              className="px-2.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-300 font-mono focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="ALL">All Difficulties</option>
+              <option value="EASY">Easy</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard</option>
+            </select>
+
+            {/* Pattern Filter Dropdown */}
+            <select
+              value={selectedPattern}
+              onChange={(e) => setSelectedPattern(e.target.value)}
+              className="px-2.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-300 font-mono focus:outline-none focus:border-blue-500/50 max-w-[160px] truncate"
+            >
+              <option value="ALL">All Patterns ({allPatterns.length})</option>
+              {allPatterns.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {/* Source Filter */}
+            <select
+              value={selectedSource}
+              onChange={(e) => setSelectedSource(e.target.value)}
+              className="px-2.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-300 font-mono focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="ALL">All Sheets</option>
+              <option value="NEETCODE_150">NeetCode 150</option>
+              <option value="STRIVER_A2Z">Striver A2Z</option>
+            </select>
+
+            {/* Clear All Button if active */}
+            {isFilterActive && (
+              <button
+                onClick={clearAllFilters}
+                className="px-2.5 py-2 rounded-xl bg-rose-600/15 hover:bg-rose-600/25 text-rose-400 border border-rose-500/30 text-xs font-mono font-bold flex items-center gap-1 transition-all"
+              >
+                <X size={13} /> Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isFilterActive ? (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-blue-950/20 border border-blue-500/30 gap-2 text-xs">
+            <div className="flex items-center gap-2 text-white">
+              <span className="font-bold text-blue-400 font-mono">
+                {searchResults.length} of {DSA_PROBLEMS.length} Problems Matching
+              </span>
+              <span className="text-gray-400 hidden sm:inline">
+                ({selectedStatus !== 'ALL' ? selectedStatus : ''} {selectedDifficulty !== 'ALL' ? selectedDifficulty : ''} {selectedPattern !== 'ALL' ? `• ${selectedPattern}` : ''})
+              </span>
+            </div>
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-blue-400 hover:text-white font-mono underline self-start sm:self-auto"
+            >
+              Clear All Filters
+            </button>
+          </div>
+
+          {searchResults.length === 0 ? (
+            <div className="p-12 text-center glass-panel rounded-2xl border border-white/10 space-y-3">
+              <Search size={32} className="mx-auto text-gray-500" />
+              <p className="text-sm font-bold text-white">No problems found matching your filters.</p>
+              <p className="text-xs text-gray-400 font-mono">Try searching for a different pattern name or resetting difficulty.</p>
+              <Button onClick={clearAllFilters} variant="secondary" size="sm" className="mt-2">
+                Clear Filters
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {searchResults.map(prob => {
+                const isSolved = solvedProblemIds.has(prob.id);
+                const attemptData = dsaStore.attempts.filter(a => a.problemId === prob.id);
+                const lastAttempt = attemptData[attemptData.length - 1];
+                const topic = DSA_TOPICS.find(t => t.id === prob.topicId);
+
+                return (
+                  <div 
+                    key={prob.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isSolved 
+                        ? 'bg-emerald-950/15 border-emerald-500/25' 
+                        : 'bg-[#090b10] border-white/5 hover:border-white/15'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isSolved ? (
+                            <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+                          ) : (
+                            <span className="w-4 h-4 rounded-full border border-gray-600 flex-shrink-0" />
+                          )}
+                          <a
+                            href={prob.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-white hover:text-blue-400 transition-colors flex items-center gap-1.5 truncate text-sm"
+                          >
+                            <span className="truncate">{prob.name}</span>
+                            <ExternalLink size={12} className="text-gray-500 flex-shrink-0" />
+                          </a>
+                          <DifficultyBadge difficulty={prob.difficulty as any} />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs font-mono">
+                          {topic && (
+                            <span className="text-[10px] bg-white/5 text-gray-300 px-2 py-0.5 rounded border border-white/5">
+                              {topic.icon} {topic.name}
+                            </span>
+                          )}
+                          <span className="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded border border-blue-500/20">
+                            {prob.pattern}
+                          </span>
+                          <span className="text-[10px] text-gray-500">
+                            {prob.source.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleOpenLogModal(prob)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 flex-shrink-0 ${
+                          isSolved 
+                            ? 'bg-white/5 text-gray-300 hover:bg-white/10' 
+                            : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-500/20'
+                        }`}
+                      >
+                        <PlusCircle size={13} />
+                        <span>{isSolved ? 'Log Again' : 'Solve & Log'}</span>
+                      </button>
+                    </div>
+
+                    {isSolved && lastAttempt && (
+                      <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs text-gray-400 font-mono">
+                        <span>Solved in {lastAttempt.timeTakenMin}m</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>Confidence:</span>
+                          <ConfidenceStars value={lastAttempt.confidence} size={11} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* 1. LEVELS TAB (BEGINNER TO ADVANCED ZERO-OVERWHELM SYLLABUS) */}
+          {activeTab === 'levels' && (() => {
         const curLevel = CURRICULUM_LEVELS.find(l => l.levelNumber === selectedLevelNum) || CURRICULUM_LEVELS[0];
         const solvedCountInLevel = curLevel.recommendedProblemIds.filter(id => solvedProblemIds.has(id)).length;
         const totalInLevel = curLevel.recommendedProblemIds.length;
@@ -341,34 +587,6 @@ export const DSATrackerPage: React.FC = () => {
         );
       })()}
 
-      {/* Search & Filters (Shown on Topics Tab) */}
-      {activeTab === 'topics' && (
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search problems, patterns, topics..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0e1118] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
-            />
-          </div>
-
-          <div className="flex gap-2 w-full sm:w-auto">
-            {['ALL', 'EASY', 'MEDIUM', 'HARD'].map(diff => (
-              <button
-                key={diff}
-                onClick={() => setSelectedDifficulty(diff)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedDifficulty === diff ? 'bg-white/10 text-white border border-white/20' : 'text-gray-400 hover:text-white'}`}
-              >
-                {diff}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Topics View */}
       {activeTab === 'topics' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -559,6 +777,8 @@ export const DSATrackerPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Attempt Logger Modal */}
