@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { usePortfolioStore } from '../../stores/portfolioStore';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export const HomePage: React.FC = () => {
   const { problems, topics, attempts, getStats } = useDsaStore();
   const { getActiveSprint } = useSprintStore();
   const { getStreaks } = useDashboardStore();
+  const { profile } = usePortfolioStore();
 
   const [activeTab, setActiveTab] = useState<'stack' | 'architecture' | 'mission'>('stack');
 
@@ -53,10 +55,10 @@ export const HomePage: React.FC = () => {
 
         {/* Bold Modern Headline */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight mb-5 max-w-5xl leading-tight">
-          Hi, I'm <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-blue-500 to-purple-500">Sanjeev Vibhakar</span>
+          Hi, I'm <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-blue-500 to-purple-500">{profile.name}</span>
           <br />
           <span className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-200">
-            Backend & Distributed Systems Engineer
+            {profile.title}
           </span>
         </h1>
 

@@ -16,6 +16,7 @@ export const getExportSnapshot = () => {
     daily: localStorage.getItem('career-os-daily'),
     sprint: localStorage.getItem('career-os-sprint'),
     syllabus: localStorage.getItem('career-os-syllabus'),
+    portfolio: localStorage.getItem('career-os-portfolio'),
     dashboard: localStorage.getItem('career-os-dashboard'),
     exportedAt: new Date().toISOString(),
   };
@@ -28,6 +29,7 @@ export const importSnapshotString = (jsonString: string): boolean => {
     if (data.daily) localStorage.setItem('career-os-daily', data.daily);
     if (data.sprint) localStorage.setItem('career-os-sprint', data.sprint);
     if (data.syllabus) localStorage.setItem('career-os-syllabus', data.syllabus);
+    if (data.portfolio) localStorage.setItem('career-os-portfolio', data.portfolio);
     if (data.dashboard) localStorage.setItem('career-os-dashboard', data.dashboard);
     return true;
   } catch (err) {
