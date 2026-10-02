@@ -259,7 +259,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10 animate-fade-in">
       {/* 1. Header Bar */}
-      <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl glass-panel relative border border-white/10 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl glass-panel relative border border-white/10 shadow-sm gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-[var(--text-primary)] tracking-tight flex items-center gap-2">
             <span>{greeting}, {userName}</span>
@@ -270,15 +270,15 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto justify-start sm:justify-end">
           {/* Master Roadmap Button */}
           <button
             onClick={() => setRoadmapOpen(true)}
-            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm"
+            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap"
             title="View 6-Level Master Roadmap"
           >
             <Map size={13} />
-            <span className="hidden sm:inline">Roadmap</span>
+            <span className="inline">Roadmap</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20">L{currentLevel}</span>
           </button>
 
@@ -323,7 +323,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       </div>
 
       {/* 2. Top Telemetry Row (4 Micro-KPIs) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* KPI 1: Master Level & Readiness */}
         <div 
           onClick={() => setRoadmapOpen(true)}
@@ -415,7 +415,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         {/* 5 Distinct Goal Rows */}
         <div className="space-y-2 pt-1">
           {/* Goal 1: Morning DSA Problem */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             solvedDsaToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
               : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-blue-500/30'
@@ -443,14 +443,14 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
                 setSelectedModalProblem(dsaFocusProblem);
                 setLogModalOpen(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-bold text-xs border border-blue-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-bold text-xs border border-blue-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
               {solvedDsaToday ? 'Log Another' : 'Solve & Log'}
             </button>
           </div>
 
           {/* Goal 2: Workday Synergy Goal */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             loggedJournalToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
               : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-sky-500/30'
@@ -475,14 +475,14 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
             <button
               onClick={() => navigate('/journal')}
-              className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 font-bold text-xs border border-sky-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 font-bold text-xs border border-sky-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
               {loggedJournalToday ? 'View Entry' : 'Log Journal'}
             </button>
           </div>
 
           {/* Goal 3: Evening Tech Sprint */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             loggedTechToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
               : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-purple-500/30'
@@ -507,14 +507,14 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
             <button
               onClick={() => navigate('/sprint')}
-              className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
               {loggedTechToday ? 'View Sprint' : 'Open Sprint'}
             </button>
           </div>
 
           {/* Goal 4: Speech Studio Practice */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             loggedCommToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
               : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-emerald-500/30'
@@ -539,14 +539,14 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
             <button
               onClick={() => navigate('/communication')}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
               {loggedCommToday ? 'Practice More' : 'Record Speech'}
             </button>
           </div>
 
           {/* Goal 5: Daily Gym Workout */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+          <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             loggedGymToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
               : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-orange-500/30'
@@ -571,7 +571,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
             <button
               onClick={() => navigate('/gym')}
-              className="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 font-bold text-xs border border-orange-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 font-bold text-xs border border-orange-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
               {loggedGymToday ? 'View Workout' : 'Track Gym'}
             </button>
@@ -591,7 +591,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           </div>
           <button 
             onClick={() => navigate('/dsa')}
-            className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex-shrink-0 transition-colors"
+            className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
           >
             Review Now
           </button>
@@ -643,7 +643,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       </div>
 
       {/* 6. Quick Habit Shortcuts */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
         <button 
           onClick={() => navigate('/journal')}
           className="p-3 rounded-xl bg-black/30 hover:bg-white/5 border border-white/10 hover:border-sky-500/30 flex items-center justify-center gap-2 text-xs text-[var(--text-primary)] font-semibold transition-all"
@@ -676,7 +676,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         title={`Log Solution: ${selectedModalProblem?.name || dsaFocusProblem?.name || 'Problem'}`}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               type="number" 
               label="Time Taken (Minutes)" 
@@ -703,7 +703,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             rows={2} 
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Time Complexity" 
               value={attemptForm.complexityTime} 
@@ -777,7 +777,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={handlePushSupabase}
               disabled={syncLoading}

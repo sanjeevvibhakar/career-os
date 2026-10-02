@@ -572,7 +572,7 @@ export const DSATrackerPage: React.FC = () => {
             Pattern: <strong>{selectedProblem?.pattern}</strong> • Saving this attempt will automatically schedule 5 spaced retention checkpoints (+1, +3, +7, +21, +60 days).
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               type="number" 
               label="Time Taken (Minutes)" 
@@ -607,7 +607,7 @@ export const DSATrackerPage: React.FC = () => {
             rows={2} 
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input 
               label="Time Complexity" 
               value={formData.complexityTime} 

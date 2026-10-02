@@ -82,16 +82,16 @@ export const WeeklyReviewPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Weekly Review</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">Weekly Review</h1>
           <p className="text-[var(--text-secondary)]">Week of {weekStartDate}</p>
         </div>
         <Button 
           variant="secondary" 
           onClick={handleGenerateAiSummary} 
           loading={aiLoading}
-          className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+          className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 w-full sm:w-auto"
         >
           <Sparkles size={16} className="mr-2" />
           Ask AI Coach
@@ -114,7 +114,7 @@ export const WeeklyReviewPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">Quantitative Metrics</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <Input type="number" label="DSA Solved" value={formData.dsaProblemsSolved} onChange={e => setFormData({...formData, dsaProblemsSolved: parseInt(e.target.value)})} />
               <Input type="number" label="DSA Acc %" value={formData.dsaAccuracy} onChange={e => setFormData({...formData, dsaAccuracy: parseInt(e.target.value)})} />
               <Input type="number" label="Tech Hours" value={formData.techHours} onChange={e => setFormData({...formData, techHours: parseFloat(e.target.value)})} />
