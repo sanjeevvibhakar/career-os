@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { PublicNavbar } from './PublicNavbar';
 import { Footer } from './Footer';
+import { ThemeToggle } from '../shared/ThemeToggle';
 
 export const PublicLayout: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ export const PublicLayout: React.FC = () => {
         <Outlet />
       </main>
       <Footer />
+      <ThemeToggle />
     </div>
   );
 };

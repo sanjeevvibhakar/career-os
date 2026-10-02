@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   Home, Brain, Code, BookOpen, Mic, Calendar, 
-  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight
+  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight, Dumbbell
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import { ThemeToggle } from '../shared/ThemeToggle';
 
 export const PrivateLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,7 +18,7 @@ export const PrivateLayout: React.FC = () => {
     navigate('/login');
   };
 
-  // The 5 Core Daily Preparation Items
+  // The 5 Core Daily Items
   const primaryNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <Home size={18} /> },
     { name: 'DSA Tracker', path: '/dsa', icon: <Brain size={18} /> },
@@ -26,10 +27,10 @@ export const PrivateLayout: React.FC = () => {
     { name: 'Timetable', path: '/schedule', icon: <Calendar size={18} /> },
   ];
 
-  // Secondary Habits & Review
+  // Habits & Review
   const secondaryNavItems = [
     { name: 'Journal', path: '/journal', icon: <BookOpen size={18} /> },
-    { name: 'Gym Session', path: '/gym', icon: <Activity size={18} /> },
+    { name: 'Gym Tracker', path: '/gym', icon: <Dumbbell size={18} /> },
     { name: 'Weekly Review', path: '/review', icon: <BarChart size={18} /> },
   ];
 
@@ -62,10 +63,10 @@ export const PrivateLayout: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {/* Core Preparation Navigation */}
+        {/* Master System Navigation */}
         <div>
           <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Core Preparation
+            Master System
           </div>
           <nav className="space-y-1">
             {primaryNavItems.map((item) => {
@@ -200,6 +201,8 @@ export const PrivateLayout: React.FC = () => {
             );
           })}
         </nav>
+        {/* Floating Theme Toggle (Bottom-Left) */}
+        <ThemeToggle />
       </div>
     </div>
   );

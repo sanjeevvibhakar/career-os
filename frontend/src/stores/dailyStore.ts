@@ -248,7 +248,16 @@ export const useDailyStore = create<DailyState>()(
       },
 
       getScheduleForDay: (dayOfWeek) => {
-        return get().schedule[dayOfWeek] || [];
+        const schedule = get().schedule;
+        if (schedule[dayOfWeek] && schedule[dayOfWeek].length > 0) return schedule[dayOfWeek];
+        const normalized = dayOfWeek.toLowerCase();
+        for (const [key, val] of Object.entries(schedule)) {
+          if (key.toLowerCase() === normalized && val.length > 0) return val;
+        }
+        for (const [key, val] of Object.entries(DEFAULT_SCHEDULE)) {
+          if (key.toLowerCase() === normalized) return val;
+        }
+        return [];
       }
     }),
     { name: 'career-os-daily' }

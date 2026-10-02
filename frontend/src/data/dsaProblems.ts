@@ -52,7 +52,7 @@ export const DSA_PROBLEMS: DsaProblemSeed[] = [
   { id: 6, topicId: 1, name: 'Product of Array Except Self', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/product-of-array-except-self/', pattern: 'Prefix/Suffix Product' },
   { id: 7, topicId: 1, name: 'Longest Consecutive Sequence', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/longest-consecutive-sequence/', pattern: 'Hash Set + Sequence Start' },
   { id: 8, topicId: 1, name: 'Maximum Subarray (Kadane)', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/maximum-subarray/', pattern: "Kadane's Algorithm" },
-  { id: 9, topicId: 1, name: 'Sort Colors (Dutch Flag)', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/sort-colors/', pattern: 'Dutch National Flag' },
+  { id: 9, topicId: 2, name: 'Sort Colors (Dutch Flag)', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/sort-colors/', pattern: 'Dutch National Flag' },
   { id: 10, topicId: 1, name: 'Next Permutation', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/next-permutation/', pattern: 'Array Manipulation' },
 
   // Topic 3: Two Pointers
@@ -154,4 +154,30 @@ export const DSA_PROBLEMS: DsaProblemSeed[] = [
   { id: 78, topicId: 20, name: 'Spiral Matrix', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/spiral-matrix/', pattern: 'Layer-by-Layer Traversal' },
   { id: 79, topicId: 20, name: 'Set Matrix Zeroes', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/set-matrix-zeroes/', pattern: 'In-place Marking' },
   { id: 80, topicId: 20, name: 'Pow(x, n)', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/powx-n/', pattern: 'Binary Exponentiation' },
+
+  // Topic 2: Sorting (Added)
+  { id: 81, topicId: 2, name: 'Merge Sort & Count Inversions', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/sort-an-array/', pattern: 'Divide & Conquer' },
+  { id: 82, topicId: 2, name: 'Largest Number', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/largest-number/', pattern: 'Custom Comparator' },
+  { id: 83, topicId: 2, name: 'Merge Sorted Array', difficulty: 'EASY', source: 'LEETCODE', sourceUrl: 'https://leetcode.com/problems/merge-sorted-array/', pattern: 'In-Place Three Pointers' },
+  { id: 84, topicId: 2, name: 'Kth Largest Element in an Array', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/kth-largest-element-in-an-array/', pattern: 'Quickselect Partitioning' },
+
+  // Topic 6: Strings (Added)
+  { id: 85, topicId: 6, name: 'Longest Common Prefix', difficulty: 'EASY', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/longest-common-prefix/', pattern: 'Horizontal Scanning' },
+  { id: 86, topicId: 6, name: 'String to Integer (atoi)', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/string-to-integer-atoi/', pattern: 'State Machine Parsing' },
+  { id: 87, topicId: 6, name: 'Longest Palindromic Substring', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/longest-palindromic-substring/', pattern: 'Expand Around Center' },
+
+  // Topic 7: Recursion (Added)
+  { id: 88, topicId: 7, name: 'Pow(x, n) (Recursive)', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/powx-n/', pattern: 'Divide & Conquer Recursion' },
+  { id: 89, topicId: 7, name: 'Generate Parentheses', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/generate-parentheses/', pattern: 'Backtracking Recursion' },
+  { id: 90, topicId: 7, name: 'Count Good Numbers', difficulty: 'MEDIUM', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/count-good-numbers/', pattern: 'Modular Exponentiation' },
+
+  // Topic 11: BST (Added)
+  { id: 91, topicId: 11, name: 'Validate Binary Search Tree', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/validate-binary-search-tree/', pattern: 'Inorder / Min-Max Range' },
+  { id: 92, topicId: 11, name: 'Lowest Common Ancestor of a BST', difficulty: 'EASY', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/', pattern: 'BST Invariant Traversal' },
+  { id: 93, topicId: 11, name: 'Kth Smallest Element in a BST', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/kth-smallest-element-in-a-bst/', pattern: 'Inorder Traversal' },
+  { id: 94, topicId: 11, name: 'Insert into a Binary Search Tree', difficulty: 'MEDIUM', source: 'LEETCODE', sourceUrl: 'https://leetcode.com/problems/insert-into-a-binary-search-tree/', pattern: 'BST Pointer Walk' },
+
+  // Topic 15: Greedy (Added to ensure >= 3 questions)
+  { id: 95, topicId: 15, name: 'Gas Station', difficulty: 'MEDIUM', source: 'NEETCODE_150', sourceUrl: 'https://leetcode.com/problems/gas-station/', pattern: 'Greedy Accumulator / Net Deficit' },
+  { id: 96, topicId: 15, name: 'Assign Cookies', difficulty: 'EASY', source: 'STRIVER_A2Z', sourceUrl: 'https://leetcode.com/problems/assign-cookies/', pattern: 'Greedy Two Pointers' },
 ];

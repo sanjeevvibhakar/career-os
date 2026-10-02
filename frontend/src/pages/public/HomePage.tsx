@@ -110,7 +110,7 @@ export const HomePage: React.FC = () => {
                 <span className="font-mono text-white font-bold">{progressPercent}%</span>
               </div>
               <div className="text-2xl font-extrabold text-white font-mono mb-2">
-                {stats.totalSolved} <span className="text-xs text-gray-400 font-normal">/ {stats.totalProblems || 80} Solved</span>
+                {stats.totalSolved} <span className="text-xs text-gray-400 font-normal">/ {stats.totalProblems || 96} Solved</span>
               </div>
               <div className="w-full bg-gray-800 rounded-full h-1.5 mb-3 overflow-hidden">
                 <div 
@@ -119,7 +119,7 @@ export const HomePage: React.FC = () => {
                 />
               </div>
               <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5 font-mono">
-                <span>80 Patterns</span>
+                <span>{stats.totalProblems || 96} Problems</span>
                 <span className="text-emerald-400">{topics.length || 20} Categories</span>
               </div>
             </div>

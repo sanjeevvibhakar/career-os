@@ -14,30 +14,48 @@ const CATEGORY_COLORS = {
 
 export const SchedulePage: React.FC = () => {
   const dailyStore = useDailyStore();
-  const [activeDay, setActiveDay] = useState('Monday');
+  const daysByJs = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = daysByJs[new Date().getDay()];
+  const [activeDay, setActiveDay] = useState(todayName);
 
   const blocks = dailyStore.getScheduleForDay(activeDay);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)]">Career OS Schedule</h1>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">Daily Timetable</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-mono mt-0.5">
+            Synchronized with your biological ultradian rhythm & work routine
+          </p>
+        </div>
+        <div className="px-3 py-1 rounded-xl glass-panel text-xs font-mono font-bold text-blue-400 border border-blue-500/20">
+          Today: {todayName}
+        </div>
       </div>
 
-      <div className="flex overflow-x-auto border-b border-[var(--border)] pb-2 hide-scrollbar">
-        {DAYS.map(day => (
-          <button
-            key={day}
-            onClick={() => setActiveDay(day)}
-            className={`px-4 py-2 font-medium whitespace-nowrap transition-colors ${
-              activeDay === day 
-                ? 'text-blue-500 border-b-2 border-blue-500' 
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            {day}
-          </button>
-        ))}
+      <div className="flex overflow-x-auto border-b border-[var(--border)] pb-2 hide-scrollbar gap-1">
+        {DAYS.map(day => {
+          const isToday = day === todayName;
+          const isActive = activeDay === day;
+
+          return (
+            <button
+              key={day}
+              onClick={() => setActiveDay(day)}
+              className={`px-3.5 py-2 font-medium text-xs sm:text-sm whitespace-nowrap rounded-xl transition-all flex items-center gap-1.5 ${
+                isActive 
+                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 font-bold' 
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5'
+              }`}
+            >
+              <span>{day}</span>
+              {isToday && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Current Day" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

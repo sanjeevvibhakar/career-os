@@ -209,6 +209,22 @@ export const useDsaStore = create<DsaState>()(
         }, {} as Record<string, number>);
       }
     }),
-    { name: 'career-os-dsa' }
+    {
+      name: 'career-os-dsa',
+      version: 2,
+      migrate: (persistedState: any) => {
+        return {
+          ...persistedState,
+          topics: DSA_TOPICS,
+          problems: DSA_PROBLEMS,
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.problems = DSA_PROBLEMS;
+          state.topics = DSA_TOPICS;
+        }
+      }
+    }
   )
 );

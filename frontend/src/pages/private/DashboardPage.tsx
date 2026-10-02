@@ -2,22 +2,24 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { StreakBadge } from '../../components/shared/StreakBadge';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
+import { RoadmapModal } from '../../components/dashboard/RoadmapModal';
+import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
 import { computeGodMode } from '../../engine/godModeEngine';
-import { GodModeIntelligenceCard } from '../../components/dashboard/GodModeIntelligenceCard';
+import { CURRICULUM_LEVELS } from '../../data/curriculumData';
+import { getRoutineForToday } from '../../data/gymData';
 import { 
-  Brain, Code, Mic, Activity, CheckCircle2, Clock, 
-  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle, Dumbbell,
-  Cloud, Smartphone, Laptop, RefreshCw, Check, Database, Copy, Zap, ExternalLink, Share2, Settings
+  Brain, Code, Mic, CheckCircle2, Clock, 
+  Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, Dumbbell,
+  Check, Smartphone, Settings, Sparkles, Map, Target, Briefcase, ExternalLink, Share2, Copy
 } from 'lucide-react';
 import { 
   getSavedCloudUrl, setSavedCloudUrl, testCloudHealth, 
@@ -27,7 +29,7 @@ import {
   getSupabaseConfig, setSupabaseConfig, testSupabaseConnection, 
   pushToSupabase, pullFromSupabase 
 } from '../../services/supabase';
-import { populateDayOneEfforts } from '../../data/dayOneData.ts';
+import { populateDayOneEfforts } from '../../data/dayOneData';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +41,10 @@ export const DashboardPage: React.FC = () => {
 
   const [greeting, setGreeting] = useState('Good Morning');
   const [logModalOpen, setLogModalOpen] = useState(false);
+  const [roadmapOpen, setRoadmapOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
+
   const [attemptForm, setAttemptForm] = useState({
     timeTakenMin: 30,
     solvedIndependently: true,
@@ -51,8 +57,6 @@ export const DashboardPage: React.FC = () => {
   });
 
   const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [syncTab, setSyncTab] = useState<'supabase' | 'backup'>('supabase');
-  const [cloudUrl, setCloudUrl] = useState(getSavedCloudUrl());
   const [supabaseUrl, setSupabaseUrl] = useState(getSupabaseConfig().url);
   const [supabaseKey, setSupabaseKey] = useState(getSupabaseConfig().anonKey);
   const [copiedSql, setCopiedSql] = useState(false);
@@ -61,9 +65,96 @@ export const DashboardPage: React.FC = () => {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+
+    // Auto-configure from Magic Link if present
+    const params = new URLSearchParams(window.location.search);
+    const qUrl = params.get('supaUrl');
+    const qKey = params.get('supaKey');
+    if (qUrl && qKey) {
+      setSupabaseConfig(qUrl, qKey);
+      setSupabaseUrl(qUrl);
+      setSupabaseKey(qKey);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setSyncModalOpen(true);
+      setSyncMessage('🚀 Mobile Link paired! Pulling latest cloud data...');
+      pullFromSupabase().then((res) => {
+        if (res.success && res.data) {
+          importSnapshotString(JSON.stringify(res.data));
+          setSyncMessage('✓ Phone successfully paired and synced! Reloading...');
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          setSyncMessage(res.message);
+        }
+      });
+    }
+  }, []);
+
+  // Compute Core Metrics & Master Roadmap
+  const solvedProblemIds = useMemo(() => new Set(dsaStore.attempts.map(a => a.problemId)), [dsaStore.attempts]);
+  const godMode = useMemo(() => {
+    return computeGodMode({
+      attempts: dsaStore.attempts,
+      revisions: dsaStore.revisions,
+      sprintLogs: sprintStore.logs,
+      commCount: dailyStore.communications.length,
+      gymCount: dailyStore.gymSessions.length,
+    });
+  }, [dsaStore.attempts, dsaStore.revisions, sprintStore.logs, dailyStore.communications.length, dailyStore.gymSessions.length]);
+
+  const currentLevel = godMode.currentLevel;
+  const currentLevelData = CURRICULUM_LEVELS.find(l => l.levelNumber === currentLevel) || CURRICULUM_LEVELS[0];
+
+  const dueRevisions = dsaStore.getDueRevisions();
+  const topicStats = dsaStore.getTopicStats();
+  const bottleneckTopic = topicStats.length > 0 
+    ? [...topicStats].sort((a, b) => a.avgConfidence - b.avgConfidence)[0]
+    : null;
+
+  const dsaStats = dsaStore.getStats();
+  const streaks = dashboardStore.getStreaks();
+  const dsaStreak = streaks.find(s => s.type === 'dsa')?.currentCount || 1;
+  const activeSprint = sprintStore.getActiveSprint();
+  const todayRoutine = getRoutineForToday();
+
+  // Find next unsolved problem for today
+  const randomUnsolvedProblem = () => {
+    if (godMode.nextRecommendedProblem) return godMode.nextRecommendedProblem;
+    if (!bottleneckTopic) return dsaStore.problems[0] || null;
+    const problems = dsaStore.getProblemsByTopic(bottleneckTopic.topicId);
+    const unsolved = problems.filter(p => p.attemptCount === 0);
+    if (unsolved.length === 0) return problems[0] || null;
+    return unsolved[0];
+  };
+  const dsaFocusProblem = randomUnsolvedProblem();
+
+  // Daily Status Checking (YYYY-MM-DD)
+  const todayDate = new Date().toISOString().split('T')[0];
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = daysOfWeek[new Date().getDay()];
+  const todaySchedule = dailyStore.getScheduleForDay(todayName) || [];
+
+  const solvedDsaToday = dsaStore.attempts.some(a => a.attemptedAt.startsWith(todayDate));
+  const loggedJournalToday = dailyStore.journals.some(j => j.date === todayDate);
+  const loggedTechToday = sprintStore.logs.some(l => l.date === todayDate);
+  const loggedCommToday = dailyStore.communications.some(c => c.date === todayDate);
+  const loggedGymToday = dailyStore.gymSessions.some(g => g.date === todayDate && g.completed);
+
+  const completedGoalsCount = 
+    (solvedDsaToday ? 1 : 0) + 
+    (loggedJournalToday ? 1 : 0) + 
+    (loggedTechToday ? 1 : 0) + 
+    (loggedCommToday ? 1 : 0) + 
+    (loggedGymToday ? 1 : 0);
+
+  // Cloud Actions
   const handleCopyMobileLink = () => {
     if (!supabaseUrl || !supabaseKey) {
-      setSyncMessage('⚠️ Please enter your Supabase Project URL and Anon Key first.');
+      setSyncMessage('⚠️ Please configure Supabase URL & Key first.');
       return;
     }
     const currentOrigin = window.location.origin;
@@ -73,18 +164,9 @@ export const DashboardPage: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
-  const handleTestSupabase = async () => {
-    setSyncLoading(true);
-    setSyncMessage('Connecting to Supabase PostgreSQL...');
-    setSupabaseConfig(supabaseUrl, supabaseKey);
-    const res = await testSupabaseConnection();
-    setSyncLoading(false);
-    setSyncMessage(res.message);
-  };
-
   const handlePushSupabase = async () => {
     setSyncLoading(true);
-    setSyncMessage('Uploading to Supabase PostgreSQL...');
+    setSyncMessage('Saving local progress to Supabase Cloud...');
     setSupabaseConfig(supabaseUrl, supabaseKey);
     const snapshot = getExportSnapshot();
     const res = await pushToSupabase(snapshot);
@@ -94,7 +176,7 @@ export const DashboardPage: React.FC = () => {
 
   const handlePullSupabase = async () => {
     setSyncLoading(true);
-    setSyncMessage('Pulling from Supabase PostgreSQL to this device...');
+    setSyncMessage('Syncing latest cloud progress...');
     setSupabaseConfig(supabaseUrl, supabaseKey);
     const res = await pullFromSupabase();
     setSyncLoading(false);
@@ -103,6 +185,15 @@ export const DashboardPage: React.FC = () => {
       importSnapshotString(JSON.stringify(res.data));
       setTimeout(() => window.location.reload(), 1200);
     }
+  };
+
+  const handleTestSupabase = async () => {
+    setSyncLoading(true);
+    setSyncMessage('Connecting to Supabase...');
+    setSupabaseConfig(supabaseUrl, supabaseKey);
+    const res = await testSupabaseConnection();
+    setSyncLoading(false);
+    setSyncMessage(res.message);
   };
 
   const handleCopySql = () => {
@@ -120,106 +211,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
-  const handleTestCloud = async () => {
-    setSyncLoading(true);
-    setSyncMessage('Pinging backend server...');
-    const ok = await testCloudHealth(cloudUrl);
-    setSyncLoading(false);
-    if (ok) {
-      setSyncMessage('✓ Cloud Backend is ONLINE and responding!');
-    } else {
-      setSyncMessage('⚠️ Cloud Backend is asleep or unreachable. Render wakes up in ~30s if sleeping.');
-    }
-  };
-
-  const handlePush = async () => {
-    setSyncLoading(true);
-    setSyncMessage('Uploading local data to cloud database...');
-    setSavedCloudUrl(cloudUrl);
-    const res = await syncPushToCloud(cloudUrl);
-    setSyncLoading(false);
-    setSyncMessage(res.message);
-  };
-
-  const handlePull = async () => {
-    setSyncLoading(true);
-    setSyncMessage('Downloading latest cloud data to this device...');
-    setSavedCloudUrl(cloudUrl);
-    const res = await syncPullFromCloud(cloudUrl);
-    setSyncLoading(false);
-    setSyncMessage(res.message);
-    if (res.success) {
-      setTimeout(() => window.location.reload(), 1200);
-    }
-  };
-
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
-
-    // Auto-configure from Magic Link if present (e.g. opened from phone)
-    const params = new URLSearchParams(window.location.search);
-    const qUrl = params.get('supaUrl');
-    const qKey = params.get('supaKey');
-    if (qUrl && qKey) {
-      setSupabaseConfig(qUrl, qKey);
-      setSupabaseUrl(qUrl);
-      setSupabaseKey(qKey);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setSyncModalOpen(true);
-      setSyncMessage('🚀 Magic Mobile Link detected! Pulling latest cloud data...');
-      pullFromSupabase().then((res) => {
-        if (res.success && res.data) {
-          importSnapshotString(JSON.stringify(res.data));
-          setSyncMessage('✓ Phone successfully paired and synced from Supabase! Reloading...');
-          setTimeout(() => window.location.reload(), 1200);
-        } else {
-          setSyncMessage(res.message);
-        }
-      });
-    }
-  }, []);
-
-  const dueRevisions = dsaStore.getDueRevisions();
-  const topicStats = dsaStore.getTopicStats();
-  const bottleneckTopic = topicStats.length > 0 
-    ? [...topicStats].sort((a, b) => a.avgConfidence - b.avgConfidence)[0]
-    : null;
-
-  const randomUnsolvedProblem = () => {
-    if (!bottleneckTopic) return null;
-    const problems = dsaStore.getProblemsByTopic(bottleneckTopic.topicId);
-    const unsolved = problems.filter(p => p.attemptCount === 0);
-    if (unsolved.length === 0) return problems[0] || null;
-    return unsolved[0];
-  };
-
-  const dsaFocusProblem = randomUnsolvedProblem();
-  const activeSprint = sprintStore.getActiveSprint();
-  const streaks = dashboardStore.getStreaks();
-
-  // KPI Metrics Calculation
-  const dsaStats = dsaStore.getStats();
-  const totalSolved = dsaStats.totalSolved;
-  const commLogs = dailyStore.getRecentCommunications(10);
-  const commCount = commLogs.length;
-  const dsaStreak = streaks.find(s => s.type === 'dsa')?.currentCount || 1;
-
-  // Today's non-negotiable status
-  const todayDate = new Date().toISOString().split('T')[0];
-  const solvedDsaToday = dsaStore.attempts.some(a => a.attemptedAt.startsWith(todayDate));
-  const loggedTechToday = sprintStore.logs.some(l => l.date === todayDate);
-  const loggedCommToday = dailyStore.communications.some(c => c.date === todayDate);
-  const completedTodayCount = (solvedDsaToday ? 1 : 0) + (loggedTechToday ? 1 : 0) + (loggedCommToday ? 1 : 0);
-
-  // Get current day schedule
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const todayName = daysOfWeek[new Date().getDay()].toUpperCase();
-  const todaySchedule = dailyStore.getScheduleForDay(todayName) || [];
-
-  // Backup & Restore
   const handleExportBackup = () => {
     const backupData = {
       dsa: localStorage.getItem('career-os-dsa'),
@@ -232,7 +223,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `careeros-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `careeros-backup-${todayDate}.json`;
     a.click();
   };
 
@@ -247,7 +238,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         if (data.daily) localStorage.setItem('career-os-daily', data.daily);
         if (data.sprint) localStorage.setItem('career-os-sprint', data.sprint);
         if (data.dashboard) localStorage.setItem('career-os-dashboard', data.dashboard);
-        alert('Backup successfully restored! Reloading dashboard...');
+        alert('Backup successfully restored! Reloading...');
         window.location.reload();
       } catch (err) {
         alert('Invalid backup JSON file.');
@@ -255,19 +246,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
     };
     reader.readAsText(file);
   };
-
-  const solvedProblemIds = useMemo(() => new Set(dsaStore.attempts.map(a => a.problemId)), [dsaStore.attempts]);
-  const godMode = useMemo(() => {
-    return computeGodMode({
-      attempts: dsaStore.attempts,
-      revisions: dsaStore.revisions,
-      sprintLogs: sprintStore.logs,
-      commCount: dailyStore.communications.length,
-      gymCount: dailyStore.gymSessions.length,
-    });
-  }, [dsaStore.attempts, dsaStore.revisions, sprintStore.logs, dailyStore.communications.length, dailyStore.gymSessions.length]);
-
-  const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
 
   const handleSaveDsaAttempt = () => {
     const targetProblem = selectedModalProblem || dsaFocusProblem;
@@ -278,273 +256,359 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-8">
-      {/* Slim Header */}
-      <div className="flex items-center justify-between p-3.5 sm:p-5 rounded-2xl glass-panel relative border border-white/10">
+    <div className="space-y-4 max-w-7xl mx-auto pb-10 animate-fade-in">
+      {/* 1. Header Bar */}
+      <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl glass-panel relative border border-white/10 shadow-sm">
         <div>
-          <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-[var(--text-primary)] tracking-tight flex items-center gap-2">
             <span>{greeting}, {userName}</span>
           </h1>
-          <p className="text-[11px] text-gray-400 font-mono mt-0.5">
-            {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          <p className="text-xs text-[var(--text-secondary)] font-mono mt-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        {/* Sync & Backup Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Header Actions */}
+        <div className="flex items-center gap-2">
+          {/* Master Roadmap Button */}
+          <button
+            onClick={() => setRoadmapOpen(true)}
+            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 transition-all shadow-sm"
+            title="View 6-Level Master Roadmap"
+          >
+            <Map size={13} />
+            <span className="hidden sm:inline">Roadmap</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20">L{currentLevel}</span>
+          </button>
+
+          {/* 90/20 Focus Timer */}
+          <button
+            onClick={() => setTimerOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl font-mono text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 flex items-center gap-1.5 transition-all"
+            title="Start 90/20 Deep Work Focus Session"
+          >
+            <Clock size={13} />
+            <span className="hidden md:inline">Focus</span>
+          </button>
+
+          {/* Cloud Sync Status */}
           <button 
             onClick={() => { setSyncModalOpen(true); setSyncMessage(null); }}
             className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs border flex items-center gap-1.5 transition-all shadow-sm ${
               supabaseUrl && supabaseKey 
                 ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border-blue-500/30'
+                : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10'
             }`}
+            title="Sync Phone & Cloud"
           >
-            <span className={`w-2 h-2 rounded-full ${supabaseUrl && supabaseKey ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
-            <span className="text-xs font-semibold">{supabaseUrl && supabaseKey ? 'Cloud Active' : 'Sync'}</span>
+            <span className={`w-2 h-2 rounded-full ${supabaseUrl && supabaseKey ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'}`} />
+            <span className="hidden sm:inline">{supabaseUrl && supabaseKey ? 'Cloud' : 'Sync'}</span>
           </button>
 
+          {/* Backup Buttons */}
           <button 
             onClick={handleExportBackup}
-            className="p-1.5 rounded-xl glass-panel text-gray-300 hover:text-white border border-white/10"
+            className="p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10"
             title="Export JSON snapshot"
           >
             <Download size={14} className="text-sky-400" />
           </button>
 
-          <label className="p-1.5 rounded-xl glass-panel text-gray-300 hover:text-white border border-white/10 cursor-pointer" title="Restore JSON snapshot">
+          <label className="p-1.5 rounded-xl glass-panel text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-white/10 cursor-pointer" title="Restore JSON snapshot">
             <Upload size={14} className="text-purple-400" />
             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
           </label>
         </div>
       </div>
 
-      {/* God Mode Cognitive Advisor & Adaptive Intelligence */}
-      <GodModeIntelligenceCard
-        godMode={godMode}
-        solvedProblemIds={solvedProblemIds}
-        onOpenSolveModal={(prob) => {
-          setSelectedModalProblem(prob);
-          setLogModalOpen(true);
-        }}
-      />
-
-      {/* Top 4 Micro-KPIs Strip (Zero Fluff Text) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        {/* KPI 1: DSA */}
+      {/* 2. Top Telemetry Row (4 Micro-KPIs) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* KPI 1: Master Level & Readiness */}
         <div 
-          onClick={() => navigate('/dsa')}
-          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
+          onClick={() => setRoadmapOpen(true)}
+          className="glass-panel p-3.5 rounded-xl border border-white/10 hover:border-blue-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
         >
           <div className="flex items-center justify-between text-[11px] text-blue-400 font-bold font-mono">
-            <span className="flex items-center gap-1"><Brain size={13} /> DSA</span>
-            <span>{((totalSolved / 80) * 100).toFixed(0)}%</span>
+            <span className="flex items-center gap-1"><Sparkles size={13} /> MASTER ROADMAP</span>
+            <span>{godMode.readinessScore}% Ready</span>
           </div>
-          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
-            {totalSolved} <span className="text-xs text-gray-400 font-normal">/ 80</span>
+          <div className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono mt-1 truncate">
+            Level {currentLevel}: {currentLevelData.title.split('&')[0]}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+          <div className="text-[10px] text-[var(--text-secondary)] mt-0.5 font-mono truncate">
+            {currentLevelData.subtitle}
+          </div>
+        </div>
+
+        {/* KPI 2: DSA Mastery */}
+        <div 
+          onClick={() => navigate('/dsa')}
+          className="glass-panel p-3.5 rounded-xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
+        >
+          <div className="flex items-center justify-between text-[11px] text-purple-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Brain size={13} /> DSA SHEET</span>
+            <span>{Math.round((dsaStats.totalSolved / (dsaStats.totalProblems || 94)) * 100)}%</span>
+          </div>
+          <div className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono mt-1">
+            {dsaStats.totalSolved} <span className="text-xs text-[var(--text-secondary)] font-normal">/ {dsaStats.totalProblems}</span>
+          </div>
+          <div className="text-[10px] text-[var(--text-secondary)] mt-0.5 font-mono">
             <span className="text-emerald-400">{dsaStats.easy}E</span> • <span className="text-amber-400">{dsaStats.medium}M</span> • <span className="text-rose-400">{dsaStats.hard}H</span>
           </div>
         </div>
 
-        {/* KPI 2: Tech Sprint */}
+        {/* KPI 3: Today's Gym Split */}
         <div 
-          onClick={() => navigate('/sprint')}
-          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-purple-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
+          onClick={() => navigate('/gym')}
+          className="glass-panel p-3.5 rounded-xl border border-white/10 hover:border-orange-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
         >
-          <div className="flex items-center justify-between text-[11px] text-purple-400 font-bold font-mono">
-            <span className="flex items-center gap-1"><Code size={13} /> TECH</span>
-            <span>W{activeSprint?.currentWeek || 1}</span>
+          <div className="flex items-center justify-between text-[11px] text-orange-400 font-bold font-mono">
+            <span className="flex items-center gap-1"><Dumbbell size={13} /> TODAY'S SPLIT</span>
+            <span>{todayRoutine.estimatedMinutes}m</span>
           </div>
-          <div className="text-sm sm:text-base font-bold text-white truncate mt-1">
-            {activeSprint?.technology || 'Java 21'}
+          <div className="text-base sm:text-lg font-bold text-[var(--text-primary)] truncate mt-1">
+            {todayRoutine.title.split('(')[0]}
           </div>
-          <div className="text-[10px] text-gray-400 truncate mt-0.5 font-mono">
-            {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Concurrency'}
-          </div>
-        </div>
-
-        {/* KPI 3: Speech Practice */}
-        <div 
-          onClick={() => navigate('/communication')}
-          className="glass-panel p-3 rounded-xl border border-white/10 hover:border-emerald-500/40 cursor-pointer transition-all hover:bg-white/[0.02]"
-        >
-          <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold font-mono">
-            <span className="flex items-center gap-1"><Mic size={13} /> SPEECH</span>
-            <span className="text-[10px] text-emerald-300 font-semibold">Ready</span>
-          </div>
-          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
-            {commCount} <span className="text-xs text-gray-400 font-normal">Sess</span>
-          </div>
-          <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
-            Articulation Logs
+          <div className="text-[10px] text-[var(--text-secondary)] truncate mt-0.5 font-mono">
+            {loggedGymToday ? '✓ Session Completed' : 'Scheduled for today'}
           </div>
         </div>
 
         {/* KPI 4: Momentum Streak */}
-        <div 
-          className="glass-panel p-3 rounded-xl border border-white/10"
-        >
+        <div className="glass-panel p-3.5 rounded-xl border border-white/10">
           <div className="flex items-center justify-between text-[11px] text-amber-400 font-bold font-mono">
-            <span className="flex items-center gap-1"><Flame size={13} /> STREAK</span>
+            <span className="flex items-center gap-1"><Flame size={13} /> MOMENTUM</span>
             <span>🔥</span>
           </div>
-          <div className="text-lg sm:text-xl font-black text-white font-mono mt-1">
-            {dsaStreak} <span className="text-xs text-gray-400 font-normal">Days</span>
+          <div className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono mt-1">
+            {dsaStreak} <span className="text-xs text-[var(--text-secondary)] font-normal">Days Active</span>
           </div>
           <div className="text-[10px] text-amber-400/80 mt-0.5 font-mono">
-            Winter Arc Active
+            {godMode.playerRank}
           </div>
         </div>
       </div>
 
-      {/* Today's 3 Non-Negotiables: Sleek 1-Line Interactive Rows */}
-      <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-2.5">
+      {/* 3. TODAY'S MISSION: The 5 Non-Negotiable Goals */}
+      <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-white/10 space-y-3 shadow-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-400" />
-            <h2 className="text-xs sm:text-sm font-extrabold text-white uppercase tracking-wider font-mono">
-              Today's 3 Non-Negotiables
+            <CheckCircle2 size={18} className="text-emerald-400" />
+            <h2 className="text-xs sm:text-sm font-black text-[var(--text-primary)] uppercase tracking-wider font-mono">
+              Today's Mission (What To Do Today)
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <span className="text-xs font-bold text-emerald-400 font-mono">
-              {completedTodayCount}/3 Done
+              {completedGoalsCount}/5 Completed
             </span>
-            <div className="w-12 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="w-16 h-2 rounded-full bg-white/10 overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
-                style={{ width: `${(completedTodayCount / 3) * 100}%` }}
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300" 
+                style={{ width: `${(completedGoalsCount / 5) * 100}%` }}
               />
             </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          {/* 1. DSA Problem */}
-          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+        {/* 5 Distinct Goal Rows */}
+        <div className="space-y-2 pt-1">
+          {/* Goal 1: Morning DSA Problem */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
             solvedDsaToday 
-              ? 'bg-emerald-500/5 border-emerald-500/25' 
-              : 'bg-black/30 border-white/5 hover:border-blue-500/30'
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-blue-500/30'
           }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                solvedDsaToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                solvedDsaToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
               }`}>
-                {solvedDsaToday ? <Check size={12} /> : '1'}
+                {solvedDsaToday ? <Check size={13} /> : '1'}
               </div>
               <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
                   <span>DSA: {dsaFocusProblem?.name || 'Two Sum'}</span>
-                  {solvedDsaToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Solved</span>}
+                  {solvedDsaToday && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Solved</span>
+                  )}
                 </div>
-                <div className="text-[10px] text-gray-400 font-mono truncate">
-                  {dsaFocusProblem?.pattern || 'Pattern'} • {bottleneckTopic?.name || 'Topic'}
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                  {dsaFocusProblem?.difficulty || 'EASY'} • {dsaFocusProblem?.pattern || 'Hash Map'} • {bottleneckTopic?.name || 'Arrays'}
                 </div>
               </div>
             </div>
             <button
-              onClick={() => setLogModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-semibold text-xs border border-blue-500/30 flex-shrink-0 transition-colors"
+              onClick={() => {
+                setSelectedModalProblem(dsaFocusProblem);
+                setLogModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 font-bold text-xs border border-blue-500/30 flex-shrink-0 transition-colors"
             >
               {solvedDsaToday ? 'Log Another' : 'Solve & Log'}
             </button>
           </div>
 
-          {/* 2. Tech Focus */}
-          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
-            loggedTechToday 
-              ? 'bg-emerald-500/5 border-emerald-500/25' 
-              : 'bg-black/30 border-white/5 hover:border-purple-500/30'
+          {/* Goal 2: Workday Synergy Goal */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+            loggedJournalToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-sky-500/30'
           }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                loggedTechToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                loggedJournalToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
               }`}>
-                {loggedTechToday ? <Check size={12} /> : '2'}
+                {loggedJournalToday ? <Check size={13} /> : '2'}
               </div>
               <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
-                  <span>Tech: {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Java 21 Concurrency'}</span>
-                  {loggedTechToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Logged</span>}
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
+                  <span>Workday: {currentLevelData.practicalWorkAction.split(';')[0]}</span>
+                  {loggedJournalToday && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Logged</span>
+                  )}
                 </div>
-                <div className="text-[10px] text-gray-400 font-mono truncate">
-                  {activeSprint?.technology || 'Java 21'} • 45m deep focus
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                  Current Company Growth • Apply to your job codebase & log reflections
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/journal')}
+              className="px-3 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 font-bold text-xs border border-sky-500/30 flex-shrink-0 transition-colors"
+            >
+              {loggedJournalToday ? 'View Entry' : 'Log Journal'}
+            </button>
+          </div>
+
+          {/* Goal 3: Evening Tech Sprint */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+            loggedTechToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-purple-500/30'
+          }`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                loggedTechToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
+              }`}>
+                {loggedTechToday ? <Check size={13} /> : '3'}
+              </div>
+              <div className="truncate">
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
+                  <span>Tech: {activeSprint?.technology || 'Java 21'} — {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Concurrency'}</span>
+                  {loggedTechToday && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Logged</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                  45m deep architecture focus • High-scale engineering foundations
                 </div>
               </div>
             </div>
             <button
               onClick={() => navigate('/sprint')}
-              className="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-semibold text-xs border border-purple-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex-shrink-0 transition-colors"
             >
-              {loggedTechToday ? 'View' : 'Open'}
+              {loggedTechToday ? 'View Sprint' : 'Open Sprint'}
             </button>
           </div>
 
-          {/* 3. Speech Studio */}
-          <div className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+          {/* Goal 4: Speech Studio Practice */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
             loggedCommToday 
-              ? 'bg-emerald-500/5 border-emerald-500/25' 
-              : 'bg-black/30 border-white/5 hover:border-emerald-500/30'
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-emerald-500/30'
           }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                loggedCommToday ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-400'
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                loggedCommToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
               }`}>
-                {loggedCommToday ? <Check size={12} /> : '3'}
+                {loggedCommToday ? <Check size={13} /> : '4'}
               </div>
               <div className="truncate">
-                <div className="text-xs sm:text-sm font-bold text-white truncate flex items-center gap-1.5">
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
                   <span>Speech: Explain {dsaFocusProblem?.name || 'Two Sum'}</span>
-                  {loggedCommToday && <span className="text-[10px] text-emerald-400 font-mono">✓ Spoken</span>}
+                  {loggedCommToday && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Recorded</span>
+                  )}
                 </div>
-                <div className="text-[10px] text-gray-400 font-mono truncate">
-                  5 min verbal intuition practice
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                  5 min verbal walkthrough out loud • Simulating Tier-1 interview dialogue
                 </div>
               </div>
             </div>
             <button
               onClick={() => navigate('/communication')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex-shrink-0 transition-colors"
             >
-              {loggedCommToday ? 'Practice More' : 'Speak'}
+              {loggedCommToday ? 'Practice More' : 'Record Speech'}
+            </button>
+          </div>
+
+          {/* Goal 5: Daily Gym Workout */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+            loggedGymToday 
+              ? 'bg-emerald-500/5 border-emerald-500/30' 
+              : 'bg-black/20 dark:bg-black/30 border-white/5 hover:border-orange-500/30'
+          }`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
+                loggedGymToday ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/10 text-[var(--text-secondary)]'
+              }`}>
+                {loggedGymToday ? <Check size={13} /> : '5'}
+              </div>
+              <div className="truncate">
+                <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
+                  <span>Gym: {todayRoutine.title}</span>
+                  {loggedGymToday && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Finished</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                  {todayRoutine.estimatedMinutes} mins • {todayRoutine.description.split('.')[0]}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/gym')}
+              className="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 font-bold text-xs border border-orange-500/30 flex-shrink-0 transition-colors"
+            >
+              {loggedGymToday ? 'View Workout' : 'Track Gym'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Due Revisions Alert (If Any) */}
+      {/* 4. Spaced Repetition Due Alert (Conditional) */}
       {dueRevisions.length > 0 && (
-        <div className="p-3 sm:p-4 rounded-xl bg-purple-950/30 border border-purple-500/30 flex items-center justify-between gap-3">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2.5 min-w-0">
             <Clock size={16} className="text-purple-400 flex-shrink-0" />
             <div className="truncate text-xs">
-              <span className="font-bold text-white">{dueRevisions.length} Revision Due Today</span>
-              <span className="text-gray-400 ml-1.5 hidden sm:inline">({dueRevisions[0]?.problemName})</span>
+              <span className="font-bold text-[var(--text-primary)]">{dueRevisions.length} Spaced Repetition Due Today</span>
+              <span className="text-[var(--text-secondary)] ml-1.5 hidden sm:inline">({dueRevisions[0]?.problemName})</span>
             </div>
           </div>
           <button 
             onClick={() => navigate('/dsa')}
-            className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex-shrink-0"
+            className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex-shrink-0 transition-colors"
           >
-            Review
+            Review Now
           </button>
         </div>
       )}
 
-      {/* Compact Timetable Glance */}
-      <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-3">
+      {/* 5. Today's Schedule Glance (Showing current day blocks) */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar size={15} className="text-sky-400" />
-            <h3 className="font-bold text-white text-xs sm:text-sm font-mono uppercase tracking-wider">
+            <h3 className="font-bold text-[var(--text-primary)] text-xs sm:text-sm font-mono uppercase tracking-wider">
               Today's Schedule ({todayName})
             </h3>
           </div>
           <button 
             onClick={() => navigate('/schedule')}
-            className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20"
+            className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 transition-colors"
           >
             Full Timetable
           </button>
@@ -562,10 +626,10 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
                 'text-gray-400 bg-white/5';
 
               return (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/40 border border-white/5 text-xs">
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/30 border border-white/5 text-xs">
                   <div className="flex items-center gap-2 truncate mr-2">
-                    <span className="font-mono text-[10px] text-gray-400 flex-shrink-0">{block.time}</span>
-                    <span className="font-medium text-white truncate">{block.activity}</span>
+                    <span className="font-mono text-[10px] text-[var(--text-secondary)] flex-shrink-0">{block.time}</span>
+                    <span className="font-medium text-[var(--text-primary)] truncate">{block.activity}</span>
                   </div>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase flex-shrink-0 ${badgeColor}`}>
                     {block.category}
@@ -577,30 +641,30 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
       </div>
 
-      {/* Habit 1-Tap Shortcuts */}
+      {/* 6. Quick Habit Shortcuts */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <button 
           onClick={() => navigate('/journal')}
-          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-sky-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
+          className="p-3 rounded-xl bg-black/30 hover:bg-white/5 border border-white/10 hover:border-sky-500/30 flex items-center justify-center gap-2 text-xs text-[var(--text-primary)] font-semibold transition-all"
         >
-          <CheckCircle2 size={14} className="text-sky-400" />
+          <CheckCircle2 size={15} className="text-sky-400" />
           <span className="truncate">Journal</span>
         </button>
 
         <button 
           onClick={() => navigate('/gym')}
-          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-orange-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
+          className="p-3 rounded-xl bg-black/30 hover:bg-white/5 border border-white/10 hover:border-orange-500/30 flex items-center justify-center gap-2 text-xs text-[var(--text-primary)] font-semibold transition-all"
         >
-          <Dumbbell size={14} className="text-orange-400" />
-          <span className="truncate">Gym Log</span>
+          <Dumbbell size={15} className="text-orange-400" />
+          <span className="truncate">Gym Tracker</span>
         </button>
 
         <button 
           onClick={() => navigate('/review')}
-          className="p-2.5 sm:p-3 rounded-xl bg-black/40 hover:bg-white/5 border border-white/5 hover:border-purple-500/30 flex items-center justify-center gap-1.5 text-xs text-gray-300 font-medium transition-all"
+          className="p-3 rounded-xl bg-black/30 hover:bg-white/5 border border-white/10 hover:border-purple-500/30 flex items-center justify-center gap-2 text-xs text-[var(--text-primary)] font-semibold transition-all"
         >
-          <ShieldCheck size={14} className="text-purple-400" />
-          <span className="truncate">Review</span>
+          <ShieldCheck size={15} className="text-purple-400" />
+          <span className="truncate">Weekly Review</span>
         </button>
       </div>
 
@@ -632,7 +696,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
 
           <Textarea 
             label="Approach & Core Logic" 
-            placeholder="Key data structure or pointer trick used..." 
+            placeholder="Key data structure or pointer pattern used..." 
             value={attemptForm.approach} 
             onChange={(e) => setAttemptForm({...attemptForm, approach: e.target.value})} 
             rows={2} 
@@ -665,6 +729,29 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         </div>
       </Modal>
 
+      {/* Master 6-Level Roadmap Modal */}
+      <RoadmapModal
+        isOpen={roadmapOpen}
+        onClose={() => setRoadmapOpen(false)}
+        currentLevel={currentLevel}
+        solvedProblemIds={solvedProblemIds}
+        onSelectProblem={(probId) => {
+          const prob = dsaStore.problems.find(p => p.id === probId);
+          if (prob) {
+            setSelectedModalProblem(prob);
+            setRoadmapOpen(false);
+            setLogModalOpen(true);
+          }
+        }}
+      />
+
+      {/* 90/20 Ultradian Focus Timer */}
+      <FocusTimerModal
+        isOpen={timerOpen}
+        onClose={() => setTimerOpen(false)}
+        taskTitle={`90m Deep Focus: Level ${currentLevel} Engineering`}
+      />
+
       {/* Cloud Sync & Phone Pairing Modal */}
       <Modal
         isOpen={syncModalOpen}
@@ -672,13 +759,12 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         title="Sync Phone & Laptop"
       >
         <div className="space-y-4">
-          {/* Reassuring Status Card */}
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <div>
-                <div className="text-xs font-bold text-white">Cloud Sync Connected</div>
-                <div className="text-[11px] text-emerald-300">Instant 0ms Sync • Ready on All Devices</div>
+                <div className="text-xs font-bold text-[var(--text-primary)]">Cloud Sync Ready</div>
+                <div className="text-[11px] text-emerald-300">Instant Sync • Laptop & Phone</div>
               </div>
             </div>
             <button
@@ -690,7 +776,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </button>
           </div>
 
-          {/* Main 2 Actions */}
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={handlePushSupabase}
@@ -717,7 +802,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </button>
           </div>
 
-          {/* Feedback Banner */}
           {syncMessage && (
             <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
               syncMessage.includes('✓') 
@@ -731,7 +815,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
           )}
 
-          {/* Mobile One-Tap Link */}
           <div className="p-4 rounded-2xl bg-[#090b10] border border-blue-500/20 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-white">
@@ -752,7 +835,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </button>
           </div>
 
-          {/* Collapsible Connection Settings */}
           {showSettings && (
             <div className="space-y-3 p-4 rounded-2xl bg-[#090b10] border border-white/10 transition-all">
               <div className="flex items-center justify-between">
@@ -814,7 +896,6 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </div>
           )}
 
-          {/* Subtle Offline Backup Links */}
           <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
             <span className="text-[11px]">Offline JSON backup:</span>
             <div className="flex items-center gap-2">
