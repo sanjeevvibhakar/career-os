@@ -6,6 +6,9 @@ export interface DsaProblemSeed {
   source: 'STRIVER_A2Z' | 'NEETCODE_150' | 'GRIND_75' | 'LEETCODE';
   sourceUrl: string;
   pattern: string;
+  level?: number;
+  whyAtWork?: string;
+  whyInInterview?: string;
 }
 
 export interface DsaTopicSeed {

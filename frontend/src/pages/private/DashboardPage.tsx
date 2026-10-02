@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -12,6 +12,8 @@ import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
+import { computeGodMode } from '../../engine/godModeEngine';
+import { GodModeIntelligenceCard } from '../../components/dashboard/GodModeIntelligenceCard';
 import { 
   Brain, Code, Mic, Activity, CheckCircle2, Clock, 
   Calendar, Download, Upload, ArrowRight, ShieldCheck, Flame, PlusCircle, Dumbbell,
@@ -254,9 +256,23 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
     reader.readAsText(file);
   };
 
+  const solvedProblemIds = useMemo(() => new Set(dsaStore.attempts.map(a => a.problemId)), [dsaStore.attempts]);
+  const godMode = useMemo(() => {
+    return computeGodMode({
+      attempts: dsaStore.attempts,
+      revisions: dsaStore.revisions,
+      sprintLogs: sprintStore.logs,
+      commCount: dailyStore.communications.length,
+      gymCount: dailyStore.gymSessions.length,
+    });
+  }, [dsaStore.attempts, dsaStore.revisions, sprintStore.logs, dailyStore.communications.length, dailyStore.gymSessions.length]);
+
+  const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
+
   const handleSaveDsaAttempt = () => {
-    if (!dsaFocusProblem) return;
-    dsaStore.logAttempt(dsaFocusProblem.id, attemptForm);
+    const targetProblem = selectedModalProblem || dsaFocusProblem;
+    if (!targetProblem) return;
+    dsaStore.logAttempt(targetProblem.id, attemptForm);
     dashboardStore.updateStreak('dsa');
     setLogModalOpen(false);
   };
@@ -302,6 +318,16 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           </label>
         </div>
       </div>
+
+      {/* God Mode Cognitive Advisor & Adaptive Intelligence */}
+      <GodModeIntelligenceCard
+        godMode={godMode}
+        solvedProblemIds={solvedProblemIds}
+        onOpenSolveModal={(prob) => {
+          setSelectedModalProblem(prob);
+          setLogModalOpen(true);
+        }}
+      />
 
       {/* Top 4 Micro-KPIs Strip (Zero Fluff Text) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -581,8 +607,8 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       {/* Log Problem Modal */}
       <Modal 
         isOpen={logModalOpen} 
-        onClose={() => setLogModalOpen(false)} 
-        title={`Log Solution: ${dsaFocusProblem?.name}`}
+        onClose={() => { setLogModalOpen(false); setSelectedModalProblem(null); }} 
+        title={`Log Solution: ${selectedModalProblem?.name || dsaFocusProblem?.name || 'Problem'}`}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
