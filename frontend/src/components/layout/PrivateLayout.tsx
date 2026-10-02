@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   Home, Brain, Code, BookOpen, Mic, Calendar, 
-  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight, Dumbbell
+  Activity, BarChart, Edit, ExternalLink, LogOut, Menu, X, ChevronRight, Dumbbell, Sparkles
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { ThemeToggle } from '../shared/ThemeToggle';
+import { AiCoachModal } from '../shared/AiCoachModal';
 
 export const PrivateLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuthStore();
@@ -63,7 +65,31 @@ export const PrivateLayout: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        {/* MentorAI Assistant Banner */}
+        <div className="px-1">
+          <button
+            onClick={() => { setAiCoachOpen(true); setSidebarOpen(false); }}
+            className="w-full p-2.5 rounded-xl bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-indigo-600/20 hover:from-blue-600/30 hover:to-indigo-600/30 border border-purple-500/30 flex items-center justify-between text-left transition-all group shadow-sm"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-sm">
+                <Sparkles size={14} className="text-amber-300" />
+              </div>
+              <div className="truncate">
+                <div className="text-xs font-bold text-white flex items-center gap-1">
+                  <span>MentorAI</span>
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/30 text-purple-200">Coach</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono truncate">
+                  DSA & System Design
+                </div>
+              </div>
+            </div>
+            <ChevronRight size={14} className="text-gray-500 group-hover:text-white transition-colors" />
+          </button>
+        </div>
+
         {/* Master System Navigation */}
         <div>
           <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -204,6 +230,9 @@ export const PrivateLayout: React.FC = () => {
         </nav>
         {/* Floating Theme Toggle (Bottom-Left) */}
         <ThemeToggle />
+
+        {/* Global AI Coach Modal */}
+        <AiCoachModal isOpen={aiCoachOpen} onClose={() => setAiCoachOpen(false)} />
       </div>
     </div>
   );

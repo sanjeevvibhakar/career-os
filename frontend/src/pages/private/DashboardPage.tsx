@@ -11,6 +11,7 @@ import { RoadmapModal } from '../../components/dashboard/RoadmapModal';
 import { DailyBattleBoard } from '../../components/dashboard/DailyBattleBoard';
 import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
 import { InterviewReadinessModal } from '../../components/shared/InterviewReadinessModal';
+import { AiCoachModal } from '../../components/shared/AiCoachModal';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
@@ -51,6 +52,7 @@ export const DashboardPage: React.FC = () => {
   const [roadmapOpen, setRoadmapOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
   const [readinessHubOpen, setReadinessHubOpen] = useState(false);
+  const [aiCoachOpen, setAiCoachOpen] = useState(false);
   const [selectedModalProblem, setSelectedModalProblem] = useState<any>(null);
   const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
 
@@ -345,6 +347,16 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
 
         {/* Header Actions */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar w-full sm:w-auto justify-start sm:justify-end flex-nowrap">
+          {/* MentorAI Coach Button */}
+          <button
+            onClick={() => setAiCoachOpen(true)}
+            className="shrink-0 px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-blue-600/30 via-purple-600/30 to-indigo-600/30 hover:from-blue-600/45 hover:to-indigo-600/45 text-white border border-purple-500/40 flex items-center gap-1.5 transition-all shadow-sm whitespace-nowrap shadow-purple-500/10"
+            title="Open MentorAI — Tier-1 Mock Interviewer & Coach"
+          >
+            <Sparkles size={13} className="text-amber-300" />
+            <span className="inline">AI Coach</span>
+          </button>
+
           {/* Tier-1 Interview Hub */}
           <button
             onClick={() => setReadinessHubOpen(true)}
@@ -891,6 +903,13 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           </div>
         </div>
       </Modal>
+
+      {/* MentorAI Modal */}
+      <AiCoachModal 
+        isOpen={aiCoachOpen} 
+        onClose={() => setAiCoachOpen(false)} 
+        initialProblem={dsaFocusProblem} 
+      />
     </div>
   );
 };
