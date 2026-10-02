@@ -55,7 +55,7 @@ export interface GymSession {
   totalVolumeKg?: number;
 }
 
-interface ScheduleBlock {
+export interface ScheduleBlock {
   time: string;
   activity: string;
   category: 'work' | 'study' | 'gym' | 'rest' | 'personal';
@@ -85,7 +85,7 @@ interface DailyState {
   getScheduleForDay: (dayOfWeek: string) => ScheduleBlock[];
 }
 
-const DEFAULT_SCHEDULE = {
+export const DEFAULT_SCHEDULE = {
   'Monday': [
     { time: '05:45', activity: 'Wake Up', category: 'personal' as const },
     { time: '06:00-07:00', activity: 'Gym', category: 'gym' as const },
