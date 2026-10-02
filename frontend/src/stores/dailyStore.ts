@@ -23,6 +23,10 @@ interface CommunicationLog {
   notes: string;
   rating: number; // 1-5
   createdAt: string;
+  wpm?: number;
+  audioDurationSec?: number;
+  score?: number;
+  fillersCount?: number;
 }
 
 export interface CompletedSet {

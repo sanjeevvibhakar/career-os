@@ -103,10 +103,11 @@ export interface JournalEntry {
   energyLevel: number;
 }
 export interface CommunicationLog {
-  id: number; date: string;
+  id: number | string; date: string;
   type: 'SPEAKING' | 'WRITING' | 'TECHNICAL_EXPLANATION' | 'WORKPLACE';
   topic: string; durationMinutes: number;
   notes: string; rating: number;
+  wpm?: number; audioDurationSec?: number; score?: number; fillersCount?: number;
 }
 export interface GymSession {
   id: number; date: string;
