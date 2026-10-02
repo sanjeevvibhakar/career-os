@@ -1,7 +1,7 @@
-import React, { ComponentProps } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 
-interface ButtonProps extends ComponentProps<typeof motion.button> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -42,13 +42,15 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
+  const MotionButton = motion.button as any;
+
   return (
-    <motion.button 
+    <MotionButton 
       whileTap={{ scale: disabled || loading ? 1 : 0.96 }}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || loading}
       onClick={handleClick}
-      {...props}
+      {...(props as any)}
     >
       {loading && (
         <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -57,6 +59,6 @@ export const Button: React.FC<ButtonProps> = ({
         </svg>
       )}
       {children}
-    </motion.button>
+    </MotionButton>
   );
 };
