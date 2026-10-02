@@ -22,7 +22,7 @@ export const PrivateLayout: React.FC = () => {
   const primaryNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <Home size={18} /> },
     { name: 'DSA Tracker', path: '/dsa', icon: <Brain size={18} /> },
-    { name: 'Tech Sprint', path: '/sprint', icon: <Code size={18} /> },
+    { name: 'Tech Syllabus', path: '/sprint', icon: <Code size={18} /> },
     { name: 'Speech Studio', path: '/communication', icon: <Mic size={18} /> },
     { name: 'Timetable', path: '/schedule', icon: <Calendar size={18} /> },
   ];

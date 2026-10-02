@@ -29,8 +29,9 @@ export function computeGodMode(params: {
   sprintLogs: Array<{ actualMinutes: number }>;
   commCount: number;
   gymCount: number;
+  syllabusCompletedCount?: number;
 }): GodModeState {
-  const { attempts, revisions, sprintLogs, commCount, gymCount } = params;
+  const { attempts, revisions, sprintLogs, commCount, gymCount, syllabusCompletedCount = 0 } = params;
 
   // Set of unique solved problem IDs
   const solvedProblemIds = new Set(attempts.map(a => a.problemId));
@@ -60,14 +61,15 @@ export function computeGodMode(params: {
   const dsaPoints = Math.min(42, (totalProblemsSolved / 60) * 42);
   const completedRevisions = revisions.filter(r => r.status === 'COMPLETED').length;
   const revisionPoints = Math.min(15, (completedRevisions / 15) * 15);
-  const techPoints = Math.min(12, (sprintLogs.length / 10) * 12);
+  const effectiveTechCount = Math.max(sprintLogs.length, syllabusCompletedCount);
+  const techPoints = Math.min(12, (effectiveTechCount / 10) * 12);
   const commPoints = Math.min(8, (commCount / 6) * 8);
   const gymPoints = Math.min(5, (gymCount / 8) * 5);
 
   const readinessScore = Math.min(100, Math.round(baseEndowedScore + dsaPoints + revisionPoints + techPoints + commPoints + gymPoints));
 
   // XP & Rank Calculation
-  const totalXp = 250 + (totalProblemsSolved * 100) + (completedRevisions * 40) + (commCount * 75) + (gymCount * 50) + (sprintLogs.length * 40);
+  const totalXp = 250 + (totalProblemsSolved * 100) + (completedRevisions * 40) + (commCount * 75) + (gymCount * 50) + (effectiveTechCount * 50);
   
   let playerRank = 'Novice Software Engineer (Lv 1)';
   if (totalXp >= 3500) playerRank = 'Tier-1 Switch Ready Architect (Lv 10)';

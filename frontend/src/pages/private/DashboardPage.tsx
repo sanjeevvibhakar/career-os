@@ -14,6 +14,7 @@ import { useDailyStore } from '../../stores/dailyStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useSyllabusStore } from '../../stores/syllabusStore';
 import { computeGodMode } from '../../engine/godModeEngine';
 import { CURRICULUM_LEVELS } from '../../data/curriculumData';
 import { getRoutineForToday } from '../../data/gymData';
@@ -39,6 +40,7 @@ export const DashboardPage: React.FC = () => {
   const sprintStore = useSprintStore();
   const dashboardStore = useDashboardStore();
   const dailyStore = useDailyStore();
+  const syllabusStore = useSyllabusStore();
 
   const [greeting, setGreeting] = useState('Good Morning');
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -104,8 +106,9 @@ export const DashboardPage: React.FC = () => {
       sprintLogs: sprintStore.logs,
       commCount: dailyStore.communications.length,
       gymCount: dailyStore.gymSessions.length,
+      syllabusCompletedCount: syllabusStore.completedItemIds.length,
     });
-  }, [dsaStore.attempts, dsaStore.revisions, sprintStore.logs, dailyStore.communications.length, dailyStore.gymSessions.length]);
+  }, [dsaStore.attempts, dsaStore.revisions, sprintStore.logs, dailyStore.communications.length, dailyStore.gymSessions.length, syllabusStore.completedItemIds.length]);
 
   const currentLevel = godMode.currentLevel;
   const currentLevelData = CURRICULUM_LEVELS.find(l => l.levelNumber === currentLevel) || CURRICULUM_LEVELS[0];
@@ -141,7 +144,10 @@ export const DashboardPage: React.FC = () => {
 
   const solvedDsaToday = dsaStore.attempts.some(a => a.attemptedAt.startsWith(todayDate));
   const loggedJournalToday = dailyStore.journals.some(j => j.date === todayDate);
-  const loggedTechToday = sprintStore.logs.some(l => l.date === todayDate);
+  const syllabusPace = syllabusStore.getPaceAnalysis();
+  const nextSyllabusItem = syllabusStore.getNextPendingItem();
+  const completedSyllabusToday = Object.values(syllabusStore.completionDates).includes(todayDate);
+  const loggedTechToday = completedSyllabusToday || sprintStore.logs.some(l => l.date === todayDate);
   const loggedCommToday = dailyStore.communications.some(c => c.date === todayDate);
   const loggedGymToday = dailyStore.gymSessions.some(g => g.date === todayDate && g.completed);
 
@@ -217,6 +223,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
       dsa: localStorage.getItem('career-os-dsa'),
       daily: localStorage.getItem('career-os-daily'),
       sprint: localStorage.getItem('career-os-sprint'),
+      syllabus: localStorage.getItem('career-os-syllabus'),
       dashboard: localStorage.getItem('career-os-dashboard'),
       exportedAt: new Date().toISOString(),
     };
@@ -238,6 +245,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
         if (data.dsa) localStorage.setItem('career-os-dsa', data.dsa);
         if (data.daily) localStorage.setItem('career-os-daily', data.daily);
         if (data.sprint) localStorage.setItem('career-os-sprint', data.sprint);
+        if (data.syllabus) localStorage.setItem('career-os-syllabus', data.syllabus);
         if (data.dashboard) localStorage.setItem('career-os-dashboard', data.dashboard);
         alert('Backup successfully restored! Reloading...');
         window.location.reload();
@@ -481,7 +489,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
             </button>
           </div>
 
-          {/* Goal 3: Evening Tech Sprint */}
+          {/* Goal 3: Evening Tech Syllabus */}
           <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
             loggedTechToday 
               ? 'bg-emerald-500/5 border-emerald-500/30' 
@@ -495,13 +503,13 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
               </div>
               <div className="truncate">
                 <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-                  <span>Tech: {activeSprint?.technology || 'Java 21'} — {activeSprint?.weeks.find(w => w.weekNumber === activeSprint.currentWeek)?.focus || 'Concurrency'}</span>
+                  <span>Tech: {nextSyllabusItem ? `W${nextSyllabusItem.weekNumber}D${nextSyllabusItem.dayNumber} — ${nextSyllabusItem.subtopic}` : 'All 8 Weeks Completed!'}</span>
                   {loggedTechToday && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Logged</span>
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">✓ Completed</span>
                   )}
                 </div>
                 <div className="text-[11px] text-[var(--text-secondary)] font-mono truncate">
-                  45m deep architecture focus • High-scale engineering foundations
+                  Pace: {syllabusPace.statusLabel} • {syllabusPace.completedCount}/40 Done • 45m deep architecture study
                 </div>
               </div>
             </div>
@@ -509,7 +517,7 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
               onClick={() => navigate('/sprint')}
               className="px-3 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 font-bold text-xs border border-purple-500/30 flex-shrink-0 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
             >
-              {loggedTechToday ? 'View Sprint' : 'Open Sprint'}
+              {loggedTechToday ? 'View Syllabus' : 'Study & Mark Done'}
             </button>
           </div>
 
