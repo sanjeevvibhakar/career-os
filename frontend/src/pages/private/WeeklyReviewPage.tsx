@@ -7,6 +7,8 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useSprintStore } from '../../stores/sprintStore';
 import { useDailyStore } from '../../stores/dailyStore';
+import { generateWeeklyReviewSummary } from '../../services/aiService';
+import { Sparkles } from 'lucide-react';
 
 export const WeeklyReviewPage: React.FC = () => {
   const dashboardStore = useDashboardStore();
@@ -49,17 +51,64 @@ export const WeeklyReviewPage: React.FC = () => {
     notes: existingReview?.notes ?? '',
   });
 
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+
   const handleSave = () => {
     dashboardStore.saveReview(formData);
     alert('Weekly review saved successfully!');
+  };
+
+  const handleGenerateAiSummary = async () => {
+    setAiLoading(true);
+    try {
+      const context = {
+        journalEntries: dailyStore.journalEntries.filter(j => j.date >= weekStartDate).map(j => j.whatLearned),
+        dsaMistakes: dsaAttempts.map(a => a.mistake).filter(m => m),
+        techHours,
+        gymSessions,
+        sleepAvg: formData.sleepAvg
+      };
+      const result = await generateWeeklyReviewSummary(context);
+      setAiSummary(result);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const reviews = dashboardStore.reviews;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-[var(--text-primary)]">Weekly Review</h1>
-      <p className="text-[var(--text-secondary)]">Week of {weekStartDate}</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Weekly Review</h1>
+          <p className="text-[var(--text-secondary)]">Week of {weekStartDate}</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleGenerateAiSummary} 
+          loading={aiLoading}
+          className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+        >
+          <Sparkles size={16} className="mr-2" />
+          Ask AI Coach
+        </Button>
+      </div>
+
+      {aiSummary && (
+        <Card className="p-6 border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.15)] bg-purple-500/5">
+          <h2 className="text-xl font-bold mb-3 flex items-center text-purple-400">
+            <Sparkles size={20} className="mr-2" />
+            AI Coach Analysis
+          </h2>
+          <div className="prose prose-invert max-w-none text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+            {aiSummary}
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
