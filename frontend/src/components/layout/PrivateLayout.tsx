@@ -32,30 +32,35 @@ export const PrivateLayout: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [sidebarOpen]);
 
-  // Career Strategy & Architecture
-  const careerNavItems = [
+  // Section 1: Core Navigation
+  const coreNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <Home size={18} /> },
-    { name: 'Skills & Vault', path: '/skills-tree', icon: <Layers size={18} /> },
-    { name: 'Flagship Project', path: '/project-tracker', icon: <FolderGit2 size={18} /> },
-    { name: 'Interview Readiness', path: '/interview-readiness', icon: <Award size={18} /> },
-    { name: 'Job Pipeline', path: '/job-pipeline', icon: <Briefcase size={18} /> },
+    { name: 'Career Timeline (Oct-Jun)', path: '/timeline', icon: <Calendar size={18} /> },
   ];
 
-  // Daily Engineering Practice
-  const practiceNavItems = [
-    { name: 'DSA Tracker', path: '/dsa', icon: <Brain size={18} /> },
-    { name: 'Tech Syllabus', path: '/sprint', icon: <Code size={18} /> },
-    { name: 'System Design', path: '/system-design', icon: <Building2 size={18} /> },
+  // Section 2: Study Topics & Practice (Dedicated pages)
+  const studyNavItems = [
+    { name: 'DSA Practice Sheet', path: '/dsa', icon: <Brain size={18} /> },
+    { name: 'Backend Syllabus & Topics', path: '/sprint', icon: <Code size={18} /> },
+    { name: 'System Design Studio', path: '/system-design', icon: <Building2 size={18} /> },
     { name: 'Speech Studio', path: '/communication', icon: <Mic size={18} /> },
-    { name: 'Timetable', path: '/schedule', icon: <Calendar size={18} /> },
+    { name: 'Pocket Flashcards', path: '/flashcards', icon: <Sparkles size={18} className="text-purple-400" /> },
   ];
 
-  // Habits & Review
-  const reviewNavItems = [
-    { name: 'Pocket Flashcards', path: '/flashcards', icon: <Sparkles size={18} className="text-purple-400" /> },
-    { name: 'Journal', path: '/journal', icon: <BookOpen size={18} /> },
-    { name: 'Gym Tracker', path: '/gym', icon: <Dumbbell size={18} /> },
+  // Section 3: Job Search, Mocks & Evidence (Dedicated pages)
+  const careerNavItems = [
+    { name: 'Interview Readiness', path: '/interview-readiness', icon: <Award size={18} /> },
+    { name: 'Target Job Pipeline', path: '/job-pipeline', icon: <Briefcase size={18} /> },
+    { name: 'Skills & Evidence Vault', path: '/skills-tree', icon: <Layers size={18} /> },
+    { name: 'Flagship Backend Project', path: '/project-tracker', icon: <FolderGit2 size={18} /> },
+  ];
+
+  // Section 4: Routine & Habits
+  const routineNavItems = [
+    { name: 'Daily Timetable', path: '/schedule', icon: <Calendar size={18} /> },
     { name: 'Weekly Review', path: '/review', icon: <BarChart size={18} /> },
+    { name: 'Gym Tracker', path: '/gym', icon: <Dumbbell size={18} /> },
+    { name: 'Reflections Journal', path: '/journal', icon: <BookOpen size={18} /> },
   ];
 
   const bottomItems = [
@@ -64,12 +69,12 @@ export const PrivateLayout: React.FC = () => {
     { name: 'Public Site', path: '/', icon: <ExternalLink size={18} /> },
   ];
 
-  // Mobile Bottom Navigation Bar (Primary thumb-friendly navigation)
+  // Mobile Bottom Navigation Bar (5 thumb-accessible core tools)
   const mobileQuickItems = [
     { name: 'Home', path: '/dashboard', icon: <Home size={18} /> },
-    { name: 'Skills', path: '/skills-tree', icon: <Layers size={18} /> },
+    { name: 'Timeline', path: '/timeline', icon: <Calendar size={18} /> },
     { name: 'DSA', path: '/dsa', icon: <Brain size={18} /> },
-    { name: 'Projects', path: '/project-tracker', icon: <FolderGit2 size={18} /> },
+    { name: 'Topics', path: '/sprint', icon: <Code size={18} /> },
   ];
 
   const SidebarContent = () => (
@@ -91,6 +96,7 @@ export const PrivateLayout: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        
         {/* MentorAI Assistant Banner */}
         <div className="px-1">
           <button
@@ -116,14 +122,14 @@ export const PrivateLayout: React.FC = () => {
           </button>
         </div>
 
-        {/* Career Strategy */}
+        {/* Section 1: Core Navigation */}
         <div>
           <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Career Strategy
+            Overview
           </div>
-          <nav className="space-y-1" aria-label="Career Strategy Navigation">
-            {careerNavItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
+          <nav className="space-y-1" aria-label="Core Navigation">
+            {coreNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.name}
@@ -144,13 +150,41 @@ export const PrivateLayout: React.FC = () => {
           </nav>
         </div>
 
-        {/* Daily Engineering Practice */}
+        {/* Section 2: Study Topics & Practice */}
         <div>
           <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Practice & Fundamentals
+            Study Topics & Practice
           </div>
-          <nav className="space-y-1" aria-label="Practice Navigation">
-            {practiceNavItems.map((item) => {
+          <nav className="space-y-1" aria-label="Study Topics Navigation">
+            {studyNavItems.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center px-3.5 py-2.5 rounded-xl font-medium transition-all text-xs min-h-[40px] ${
+                    isActive 
+                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm font-semibold' 
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <span className={`mr-3 ${isActive ? 'text-purple-400' : 'text-gray-400'}`}>{item.icon}</span>
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Section 3: Job Search, Mocks & Evidence */}
+        <div>
+          <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+            Job Search & Readiness
+          </div>
+          <nav className="space-y-1" aria-label="Job Search Navigation">
+            {careerNavItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
                 <Link
@@ -172,13 +206,13 @@ export const PrivateLayout: React.FC = () => {
           </nav>
         </div>
 
-        {/* Habits & Review Section */}
+        {/* Section 4: Routine & Habits */}
         <div>
           <div className="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-            Habits & Review
+            Routine & Review
           </div>
-          <nav className="space-y-1" aria-label="Habits & Review Navigation">
-            {reviewNavItems.map((item) => {
+          <nav className="space-y-1" aria-label="Routine Navigation">
+            {routineNavItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
                 <Link
@@ -187,18 +221,19 @@ export const PrivateLayout: React.FC = () => {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center px-3.5 py-2.5 rounded-xl font-medium transition-all text-xs min-h-[40px] ${
                     isActive 
-                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-sm font-semibold' 
+                      ? 'bg-amber-600/20 text-amber-300 border border-amber-500/30 shadow-sm font-semibold' 
                       : 'text-gray-400 hover:bg-white/5 hover:text-white'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <span className={`mr-3 ${isActive ? 'text-purple-400' : 'text-gray-400'}`}>{item.icon}</span>
+                  <span className={`mr-3 ${isActive ? 'text-amber-400' : 'text-gray-400'}`}>{item.icon}</span>
                   <span>{item.name}</span>
                 </Link>
               );
             })}
           </nav>
         </div>
+
       </div>
 
       {/* Bottom Footer Actions */}

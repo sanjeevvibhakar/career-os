@@ -31,6 +31,7 @@ import { CareerSkillTreePage } from './pages/private/CareerSkillTreePage';
 import { ProjectMilestonesPage } from './pages/private/ProjectMilestonesPage';
 import { JobPipelinePage } from './pages/private/JobPipelinePage';
 import { InterviewReadinessPage } from './pages/private/InterviewReadinessPage';
+import { CareerTimelinePage } from './pages/private/CareerTimelinePage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
         {/* Private Routes */}
         <Route element={<PrivateRoute><PrivateLayout /></PrivateRoute>}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/timeline" element={<CareerTimelinePage />} />
           <Route path="/skills-tree" element={<CareerSkillTreePage />} />
           <Route path="/project-tracker" element={<ProjectMilestonesPage />} />
           <Route path="/job-pipeline" element={<JobPipelinePage />} />
