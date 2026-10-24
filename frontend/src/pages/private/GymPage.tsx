@@ -306,12 +306,10 @@ export const GymPage: React.FC = () => {
             </button>
           </div>
 
-          {streak && (
-            <div className="px-3 py-1.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 font-bold text-xs flex items-center gap-1 font-mono">
-              <Flame size={14} className="text-orange-400 fill-orange-400" />
-              <span>{streak.currentCount}d</span>
-            </div>
-          )}
+          <div className="px-3 py-1.5 rounded-xl bg-white/5 text-gray-300 border border-white/10 font-bold text-xs flex items-center gap-1.5 font-mono">
+            <Calendar size={14} className="text-orange-400" />
+            <span>{monthSessions.length} sessions logged</span>
+          </div>
         </div>
       </div>
 
@@ -408,10 +406,12 @@ export const GymPage: React.FC = () => {
                             </span>
                           )}
                         </h3>
-                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 mt-0.5">
                           <span className="text-orange-400 font-medium">{exercise.targetMuscle}</span>
                           <span>•</span>
                           <span className="font-mono text-gray-400">{exercise.defaultSets} Sets × {exercise.defaultReps}</span>
+                          <span>•</span>
+                          <span className="font-mono text-amber-300">Rest: 60–90s</span>
                         </div>
                       </div>
                     </div>

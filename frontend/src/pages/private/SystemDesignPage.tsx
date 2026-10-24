@@ -1,339 +1,332 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Building2, Calculator, Layers, ShieldCheck, ChevronRight, 
-  Sparkles, CheckCircle2, ArrowRight, Database, Server, Cpu, 
-  Network, Flame, HelpCircle, HardDrive
+  Building2, Layers, Cpu, Database, Server, Network, 
+  Check, CheckCircle2, ExternalLink, BookOpen, Clock, 
+  HelpCircle, AlertTriangle, ArrowRight, ShieldCheck, Calculator
 } from 'lucide-react';
-import { SYSTEM_DESIGN_BLUEPRINTS } from '../../data/systemDesignData';
-import type { SystemDesignBlueprint } from '../../data/systemDesignData';
+import { MASTER_ROADMAP_TOPICS, type MasterRoadmapTopic } from '../../data/masterRoadmapData';
+import { SYSTEM_DESIGN_BLUEPRINTS, type SystemDesignBlueprint } from '../../data/systemDesignData';
 import { CapacityCalculator } from '../../components/system-design/CapacityCalculator';
+import { useDailyPlannerStore } from '../../stores/dailyPlannerStore';
 import { soundService } from '../../services/soundService';
 
+const SYSTEM_DESIGN_STAGES = [
+  { id: 'Stage 1: Foundations', title: 'Stage 1: Foundations', icon: Network, count: 5, color: 'text-blue-400' },
+  { id: 'Stage 2: App & DB Design', title: 'Stage 2: App & DB Design', icon: Database, count: 6, color: 'text-emerald-400' },
+  { id: 'Stage 3: Low-Level Design', title: 'Stage 3: Low-Level Design (LLD)', icon: Cpu, count: 7, color: 'text-purple-400' },
+  { id: 'Stage 4: High-Level Design', title: 'Stage 4: High-Level Design (HLD)', icon: Server, count: 9, color: 'text-amber-400' },
+  { id: 'Stage 5: Design Exercises', title: 'Stage 5: Design Exercises', icon: Layers, count: 6, color: 'text-cyan-400' },
+];
+
 export const SystemDesignPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'BLUEPRINTS' | 'CALCULATOR' | 'TRADEOFFS'>('BLUEPRINTS');
-  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string>(SYSTEM_DESIGN_BLUEPRINTS[0].id);
+  const dailyPlannerStore = useDailyPlannerStore();
+  const [activeStageId, setActiveStageId] = useState<string>('Stage 1: Foundations');
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [showCalculator, setShowCalculator] = useState<boolean>(false);
 
-  const selectedBlueprint = SYSTEM_DESIGN_BLUEPRINTS.find(b => b.id === selectedBlueprintId) || SYSTEM_DESIGN_BLUEPRINTS[0];
+  // System Design topics from master roadmap
+  const sysDesignTopics = useMemo(() => {
+    return MASTER_ROADMAP_TOPICS.filter(t => t.track === 'SYSTEM_DESIGN');
+  }, []);
 
-  const handleTabChange = (tab: 'BLUEPRINTS' | 'CALCULATOR' | 'TRADEOFFS') => {
-    setActiveTab(tab);
+  const activeStageTopics = useMemo(() => {
+    return sysDesignTopics.filter(t => t.stage === activeStageId);
+  }, [sysDesignTopics, activeStageId]);
+
+  const activeTopic = useMemo(() => {
+    if (selectedTopicId) {
+      const found = sysDesignTopics.find(t => t.id === selectedTopicId);
+      if (found) return found;
+    }
+    return activeStageTopics[0] || sysDesignTopics[0];
+  }, [selectedTopicId, activeStageTopics, sysDesignTopics]);
+
+  // Find blueprint if active topic is a design exercise
+  const matchedBlueprint = useMemo(() => {
+    if (activeStageId !== 'Stage 5: Design Exercises') return null;
+    if (activeTopic.id.includes('url-shortener')) return SYSTEM_DESIGN_BLUEPRINTS.find(b => b.id.includes('url') || b.id.includes('rate'));
+    if (activeTopic.id.includes('rate-limiter')) return SYSTEM_DESIGN_BLUEPRINTS.find(b => b.id === 'rate-limiter');
+    if (activeTopic.id.includes('notification')) return SYSTEM_DESIGN_BLUEPRINTS.find(b => b.id.includes('notif') || b.id === 'rate-limiter');
+    return SYSTEM_DESIGN_BLUEPRINTS[0];
+  }, [activeStageId, activeTopic]);
+
+  const handleToggleTopic = (topicId: string) => {
+    const isDone = dailyPlannerStore.getTopicStatus(topicId) === 'COMPLETED';
+    dailyPlannerStore.markTopicMastered(topicId, !isDone);
     soundService.playCheckSound();
   };
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto pb-12 animate-fade-in font-sans">
+    <div className="space-y-6 max-w-6xl mx-auto pb-16 font-sans text-gray-100">
       
-      {/* 1. Header Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl glass-panel border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
-              <Building2 size={18} />
+      {/* 1. Header Banner */}
+      <header className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-[#0d1017] to-purple-950/30 border border-white/10 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center">
+                <Building2 size={18} />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                System Design Studio
+              </h1>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              System Design Studio & Blueprints
-            </h1>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">
+              Genuine beginner-to-advanced sequence: Foundations → App & DB Design → LLD → HLD → 6 Core Design Exercises.
+            </p>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] font-mono mt-1">
-            Tier-1 High-Level Architecture (HLD), Trade-Offs & Back-of-the-Envelope Capacity Estimator
-          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCalculator(prev => !prev)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Calculator size={14} className="text-blue-400" />
+              <span>{showCalculator ? 'Close Estimator' : 'Capacity Estimator'}</span>
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10 self-start sm:self-center">
-          <button
-            onClick={() => handleTabChange('BLUEPRINTS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'BLUEPRINTS'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Layers size={13} />
-            <span>Blueprints</span>
-          </button>
+      {/* Optional Capacity Calculator Modal/Panel */}
+      {showCalculator && (
+        <section className="p-4 rounded-2xl bg-[#0d1017] border border-blue-500/30">
+          <CapacityCalculator />
+        </section>
+      )}
 
-          <button
-            onClick={() => handleTabChange('CALCULATOR')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'CALCULATOR'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Calculator size={13} />
-            <span>Capacity Calculator</span>
-          </button>
+      {/* 2. 5 Stages Horizontal Tabs */}
+      <section aria-label="System Design Stages Navigation">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {SYSTEM_DESIGN_STAGES.map((stage) => {
+            const isSelected = stage.id === activeStageId;
+            const stageTopics = sysDesignTopics.filter(t => t.stage === stage.id);
+            const doneCount = stageTopics.filter(t => dailyPlannerStore.getTopicStatus(t.id) === 'COMPLETED').length;
+            const Icon = stage.icon;
 
-          <button
-            onClick={() => handleTabChange('TRADEOFFS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'TRADEOFFS'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <ShieldCheck size={13} />
-            <span>Trade-Offs</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. TAB 1: BLUEPRINTS */}
-      {activeTab === 'BLUEPRINTS' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
-          {/* Blueprint Selector (Left Column) */}
-          <div className="lg:col-span-4 space-y-2">
-            <div className="text-xs font-mono font-bold text-gray-400 px-1 uppercase tracking-wider">
-              Curated Tier-1 Systems:
-            </div>
-            {SYSTEM_DESIGN_BLUEPRINTS.map(b => (
-              <div
-                key={b.id}
-                onClick={() => { setSelectedBlueprintId(b.id); soundService.playCheckSound(); }}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  selectedBlueprintId === b.id
-                    ? 'bg-gradient-to-r from-purple-900/30 to-blue-900/20 border-purple-500/40 shadow-sm'
-                    : 'glass-panel border-white/5 hover:border-white/15'
+            return (
+              <button
+                key={stage.id}
+                onClick={() => {
+                  setActiveStageId(stage.id);
+                  setSelectedTopicId(null);
+                  soundService.playCheckSound();
+                }}
+                className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-cyan-600/20 border-cyan-500 text-white shadow-md'
+                    : 'bg-[#0d1017] border-white/10 hover:border-white/20 text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-purple-400 font-bold">{b.category}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-[10px] ${
-                    b.difficulty === 'HARD' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
-                  }`}>
-                    {b.difficulty}
+                <div className="flex items-center justify-between">
+                  <Icon size={16} className={stage.color} />
+                  <span className="text-[10px] font-mono text-gray-500">
+                    {doneCount}/{stageTopics.length}
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-white mt-1">
-                  {b.title}
-                </h3>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {b.targetCompanies.map(c => (
-                    <span key={c} className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-gray-300 font-mono">
-                      {c}
-                    </span>
-                  ))}
+                <div className="font-bold text-xs text-white mt-1.5 truncate">
+                  {stage.title}
                 </div>
-              </div>
-            ))}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 3. Stage Content & Split View */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          {/* Left Column: Topics in Current Stage */}
+          <div className="lg:col-span-5 space-y-1.5 max-h-[650px] overflow-y-auto pr-1">
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>{activeStageId} ({activeStageTopics.length} topics)</span>
+            </div>
+
+            {activeStageTopics.map((topic) => {
+              const status = dailyPlannerStore.getTopicStatus(topic.id);
+              const isSelected = topic.id === activeTopic.id;
+              const isDone = status === 'COMPLETED';
+
+              return (
+                <div
+                  key={topic.id}
+                  onClick={() => setSelectedTopicId(topic.id)}
+                  className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-cyan-950/40 border-cyan-500 shadow-md text-white'
+                      : 'bg-[#0d1017] border-white/5 hover:border-white/15 text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTopic(topic.id);
+                      }}
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                        isDone
+                          ? 'bg-emerald-600 border-emerald-500 text-white'
+                          : 'border-white/20 hover:border-white/40 text-transparent'
+                      }`}
+                      title={isDone ? 'Mark incomplete' : 'Mark completed'}
+                    >
+                      <Check size={12} />
+                    </button>
+
+                    <div className="min-w-0">
+                      <div className={`text-xs font-bold truncate ${isDone ? 'line-through text-gray-500' : 'text-white'}`}>
+                        {topic.title}
+                      </div>
+                      <div className="text-[10px] font-mono text-gray-400 mt-0.5">
+                        {topic.estimatedEffort}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-mono text-gray-500 shrink-0">
+                    #{topic.order}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Blueprint Detail View (Right Column) */}
-          <div className="lg:col-span-8 glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 space-y-5">
-            
-            {/* Blueprint Header */}
-            <div className="border-b border-white/10 pb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-purple-400 font-bold uppercase tracking-wider">
-                  {selectedBlueprint.category} • {selectedBlueprint.difficulty}
+          {/* Right Column: Active Topic Detailed Learning Content */}
+          <div className="lg:col-span-7 bg-[#0d1017] border border-white/10 rounded-2xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/5">
+              <div>
+                <span className="text-xs font-mono text-cyan-400 uppercase font-bold">
+                  {activeTopic.stage} • Topic #{activeTopic.order}
                 </span>
-                <span className="text-xs font-mono text-gray-400">
-                  Target: {selectedBlueprint.targetCompanies.join(', ')}
-                </span>
+                <h2 className="text-lg sm:text-xl font-bold text-white mt-1">
+                  {activeTopic.title}
+                </h2>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {selectedBlueprint.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                {selectedBlueprint.summary}
+
+              <button
+                onClick={() => handleToggleTopic(activeTopic.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  dailyPlannerStore.getTopicStatus(activeTopic.id) === 'COMPLETED'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white/10 hover:bg-white/20 text-gray-200'
+                }`}
+              >
+                {dailyPlannerStore.getTopicStatus(activeTopic.id) === 'COMPLETED' ? '✓ Completed' : 'Mark Complete'}
+              </button>
+            </div>
+
+            {/* Explanation & Relevance */}
+            <div className="space-y-2 text-xs leading-relaxed text-gray-300">
+              <p>
+                <strong className="text-white">Explanation: </strong>
+                {activeTopic.shortExplanation}
+              </p>
+              <p className="text-cyan-300">
+                <strong>Why this matters in system design: </strong>
+                {activeTopic.whyItMatters}
               </p>
             </div>
 
-            {/* Requirements Matrix */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-2">
-                <h4 className="text-xs font-mono font-bold text-sky-400 flex items-center gap-1.5">
-                  <CheckCircle2 size={13} /> FUNCTIONAL REQUIREMENTS
-                </h4>
-                <ul className="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-                  {selectedBlueprint.functionalReqs.map((req, i) => (
-                    <li key={i}>{req}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-4 rounded-xl bg-black/30 border border-white/5 space-y-2">
-                <h4 className="text-xs font-mono font-bold text-amber-400 flex items-center gap-1.5">
-                  <Flame size={13} /> NON-FUNCTIONAL REQUIREMENTS
-                </h4>
-                <ul className="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-                  {selectedBlueprint.nonFunctionalReqs.map((req, i) => (
-                    <li key={i}>{req}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Architectural Components */}
-            <div className="space-y-2.5">
-              <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider">
-                CORE SYSTEM COMPONENTS:
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {selectedBlueprint.keyComponents.map((comp, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-1">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <strong className="text-white">{comp.name}</strong>
-                      <span className="text-[10px] text-purple-300 bg-purple-500/15 px-1.5 py-0.2 rounded">
-                        {comp.technology}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-gray-400 leading-relaxed">
-                      {comp.role}
-                    </p>
-                  </div>
+            {/* Learning Objectives */}
+            <div className="space-y-1.5 text-xs">
+              <span className="font-bold text-gray-200">Key Design Objectives:</span>
+              <ul className="space-y-1 text-gray-300 text-[11px] list-disc list-inside">
+                {activeTopic.learningObjectives.map((obj, i) => (
+                  <li key={i}>{obj}</li>
                 ))}
-              </div>
+              </ul>
             </div>
 
-            {/* Back-of-the-Envelope Baseline */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-500/20 space-y-2 font-mono text-xs">
-              <span className="text-sky-300 font-bold block">
-                ⚡ ESTIMATION BASELINE:
+            {/* Practical Design Exercise */}
+            <div className="p-3.5 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5 text-cyan-300">
+                <Layers size={14} />
+                <span>Practical Design Exercise:</span>
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                  <span className="text-gray-400 block text-[10px]">DAU</span>
-                  <strong className="text-white">{selectedBlueprint.estimationBaseline.dau}</strong>
+              {activeTopic.practiceExercises.map((ex, i) => (
+                <div key={i} className="text-gray-300 text-[11px]">
+                  <strong className="text-white">{ex.title}: </strong>
+                  <span>{ex.description}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                  <span className="text-gray-400 block text-[10px]">READ QPS</span>
-                  <strong className="text-white">{selectedBlueprint.estimationBaseline.readQps}</strong>
-                </div>
-                <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                  <span className="text-gray-400 block text-[10px]">WRITE QPS</span>
-                  <strong className="text-white">{selectedBlueprint.estimationBaseline.writeQps}</strong>
-                </div>
-                <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-                  <span className="text-gray-400 block text-[10px]">STORAGE</span>
-                  <strong className="text-white">{selectedBlueprint.estimationBaseline.storagePerYear}</strong>
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Deep-Dive Trade-offs & Failure Modes */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider">
-                BAR-RAISER TRADE-OFFS & FAILURE MODES:
-              </h4>
-              <div className="space-y-2.5">
-                {selectedBlueprint.tradeOffs.map((to, i) => (
-                  <div key={i} className="p-3.5 rounded-xl bg-purple-950/15 border border-purple-500/25 space-y-1.5 text-xs">
-                    <div className="font-bold text-rose-300 flex items-center gap-1.5">
-                      <span>⚠️ Challenge:</span>
-                      <span>{to.challenge}</span>
-                    </div>
-                    <div className="text-gray-300 flex items-start gap-1.5 pl-2 border-l-2 border-emerald-500/40">
-                      <span>✅ <strong>Architecture Solution:</strong> {to.solution}</span>
-                    </div>
-                    <div className="text-purple-300/80 text-[11px] font-mono pl-2">
-                      ⚖️ <em>Trade-off:</em> {to.tradeoff}
-                    </div>
-                  </div>
+            {/* Completion Criteria */}
+            <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5 text-emerald-300">
+                <CheckCircle2 size={14} />
+                <span>Completion Criteria:</span>
+              </span>
+              <ul className="text-gray-300 text-[11px] list-disc list-inside space-y-0.5">
+                {activeTopic.completionCriteria.map((c, i) => (
+                  <li key={i}>{c}</li>
                 ))}
+              </ul>
+            </div>
+
+            {/* Design Blueprint Details if in Stage 5 */}
+            {matchedBlueprint && (
+              <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-3 text-xs">
+                <div className="font-bold text-white flex items-center gap-2">
+                  <Server size={14} className="text-purple-400" />
+                  <span>Blueprint Breakdown: {matchedBlueprint.title}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                  <div className="p-2 rounded bg-white/5">
+                    <span className="text-gray-400">Target DAU: </span>
+                    <span className="text-cyan-300">{matchedBlueprint.estimationBaseline.dau}</span>
+                  </div>
+                  <div className="p-2 rounded bg-white/5">
+                    <span className="text-gray-400">Read / Write QPS: </span>
+                    <span className="text-emerald-300">{matchedBlueprint.estimationBaseline.readQps} / {matchedBlueprint.estimationBaseline.writeQps}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="font-bold text-gray-300">Key Architectural Trade-Offs:</span>
+                  {matchedBlueprint.tradeOffs.map((to, i) => (
+                    <div key={i} className="p-2 rounded bg-white/[0.02] border border-white/5 space-y-0.5 text-[11px]">
+                      <div className="text-amber-300"><strong>Challenge: </strong>{to.challenge}</div>
+                      <div className="text-gray-300"><strong>Solution: </strong>{to.solution}</div>
+                      <div className="text-gray-400"><strong>Trade-off: </strong>{to.tradeoff}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Resources */}
+            <div className="pt-2 border-t border-white/5 text-xs space-y-1.5">
+              <span className="font-bold text-gray-300 flex items-center gap-1.5">
+                <BookOpen size={13} className="text-cyan-400" />
+                <span>Recommended Reading & Architecture Guides:</span>
+              </span>
+              {activeTopic.resources.map((res, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/5 text-[11px]">
+                  <span className="text-gray-200">{res.title}</span>
+                  {res.url ? (
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                    >
+                      <span>Read Guide</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  ) : (
+                    <span className="text-gray-500 font-mono text-[10px]">{res.type}</span>
+                  )}
+                </div>
+              ))}
             </div>
 
           </div>
 
         </div>
-      )}
-
-      {/* 3. TAB 2: CAPACITY CALCULATOR */}
-      {activeTab === 'CALCULATOR' && (
-        <CapacityCalculator />
-      )}
-
-      {/* 4. TAB 3: SENIOR TRADE-OFF MATRIX */}
-      {activeTab === 'TRADEOFFS' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Card 1: B-Tree vs LSM-Tree */}
-            <div className="p-5 rounded-2xl glass-panel border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Database size={16} className="text-sky-400" />
-                  B-Tree vs LSM-Tree Storage Engines
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">Storage</span>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>B-Tree (PostgreSQL, MySQL):</strong> In-place updates on disk pages. Provides $O(\log N)$ point reads and range scans. Downside: heavy random I/O writes.
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>LSM-Tree (Cassandra, RocksDB):</strong> Append-only writes to memory MemTable, flushed sequentially to immutable SSTables. Downside: Read amplification (mitigated by Bloom filters).
-              </p>
-              <div className="p-2.5 rounded-xl bg-blue-950/20 border border-blue-500/20 text-[11px] font-mono text-blue-300">
-                ⚡ Rule: Read-heavy transactional $\rightarrow$ B-Tree. High write velocity (IoT, logs, chats) $\rightarrow$ LSM-Tree.
-              </div>
-            </div>
-
-            {/* Card 2: 2PC vs Saga Pattern */}
-            <div className="p-5 rounded-2xl glass-panel border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Cpu size={16} className="text-purple-400" />
-                  2-Phase Commit (2PC) vs Saga Pattern
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">Transactions</span>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>2-Phase Commit (2PC):</strong> Synchronous coordinator locks all DB resources across services. Strong consistency, but blocks on coordinator failure and scales poorly across networks.
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>Saga Pattern:</strong> Sequence of local transactions coordinated via events or an orchestrator. If step 3 fails, steps 2 and 1 execute compensating undo actions.
-              </p>
-              <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/20 text-[11px] font-mono text-purple-300">
-                ⚡ Rule: Microservices use Saga (Eventual Consistency). Monolith single DB uses ACID transactions.
-              </div>
-            </div>
-
-            {/* Card 3: Cache Strategies */}
-            <div className="p-5 rounded-2xl glass-panel border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Server size={16} className="text-amber-400" />
-                  Cache-Aside vs Write-Through vs Write-Behind
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Caching</span>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>Cache-Aside:</strong> App reads cache; on miss, reads DB and populates cache. App writes directly to DB and invalidates cache key. Standard and resilient.
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>Write-Through:</strong> App writes to cache; cache synchronously writes to DB. No stale data, but write latency is sum of cache + DB.
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>Write-Behind (Write-Back):</strong> App writes to cache; cache batches writes to DB asynchronously. Extreme write speed, but data loss risk if cache crashes before flush.
-              </p>
-            </div>
-
-            {/* Card 4: CAP vs PACELC */}
-            <div className="p-5 rounded-2xl glass-panel border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Network size={16} className="text-emerald-400" />
-                  CAP Theorem & PACELC Trade-Off
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Distributed Theory</span>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>CAP Theorem:</strong> During network Partition (P), choose between Availability (A) and Consistency (C). You cannot choose "No Partition" because network cables will break.
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <strong>PACELC:</strong> If Partition (P), trade Availability (A) vs Consistency (C); Else (E) in normal operation, trade Latency (L) vs Consistency (C).
-              </p>
-              <div className="p-2.5 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-[11px] font-mono text-emerald-300">
-                ⚡ Examples: Cassandra is PA/EL. PostgreSQL/MongoDB is PC/EC.
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
+      </section>
 
     </div>
   );

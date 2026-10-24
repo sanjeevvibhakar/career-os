@@ -1,25 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Calendar, CheckCircle2, Clock, ArrowRight, Target, 
-  ChevronRight, Brain, Code, Building2, Briefcase, Award, ShieldCheck, Flame
+  Calendar, CheckCircle2, Circle, Clock, ArrowRight, Target, 
+  ChevronRight, Brain, Code, Building2, Filter, Layers, 
+  ExternalLink, BookOpen, Check, AlertCircle, HelpCircle
 } from 'lucide-react';
-import { useCareerStore } from '../../stores/careerStore';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { 
+  MASTER_ROADMAP_PHASES, 
+  MASTER_ROADMAP_TOPICS, 
+  type RoadmapPhaseId, 
+  type RoadmapTrack, 
+  type MasterRoadmapTopic,
+  type TopicStatus
+} from '../../data/masterRoadmapData';
+import { useDailyPlannerStore } from '../../stores/dailyPlannerStore';
+import { soundService } from '../../services/soundService';
 
 export const CareerTimelinePage: React.FC = () => {
   const navigate = useNavigate();
-  const { profile, roadmap, skills, project } = useCareerStore();
-  const [selectedPhaseId, setSelectedPhaseId] = useState<number>(roadmap[0]?.id || 1);
+  const dailyPlannerStore = useDailyPlannerStore();
 
-  const selectedPhase = roadmap.find(p => p.id === selectedPhaseId) || roadmap[0];
+  const [selectedPhaseId, setSelectedPhaseId] = useState<RoadmapPhaseId>(1);
+  const [selectedTrack, setSelectedTrack] = useState<RoadmapTrack | 'ALL'>('ALL');
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+
+  const selectedPhase = MASTER_ROADMAP_PHASES.find(p => p.id === selectedPhaseId) || MASTER_ROADMAP_PHASES[0];
+
+  // Topics for the active phase and track filter
+  const filteredTopics = useMemo(() => {
+    return MASTER_ROADMAP_TOPICS.filter(t => {
+      const matchPhase = t.phase === selectedPhaseId;
+      const matchTrack = selectedTrack === 'ALL' || t.track === selectedTrack;
+      return matchPhase && matchTrack;
+    }).sort((a, b) => a.order - b.order);
+  }, [selectedPhaseId, selectedTrack]);
+
+  // Phase completion statistics
+  const phaseStats = useMemo(() => {
+    const phaseTopics = MASTER_ROADMAP_TOPICS.filter(t => t.phase === selectedPhaseId);
+    const completed = phaseTopics.filter(t => dailyPlannerStore.getTopicStatus(t.id) === 'COMPLETED').length;
+    const total = phaseTopics.length;
+    return {
+      completed,
+      total,
+      pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+    };
+  }, [selectedPhaseId, dailyPlannerStore]);
+
+  const activeTopic = useMemo(() => {
+    if (selectedTopicId) {
+      const found = MASTER_ROADMAP_TOPICS.find(t => t.id === selectedTopicId);
+      if (found) return found;
+    }
+    return filteredTopics[0] || MASTER_ROADMAP_TOPICS[0];
+  }, [selectedTopicId, filteredTopics]);
+
+  const handleToggleTopic = (topicId: string) => {
+    const current = dailyPlannerStore.getTopicStatus(topicId);
+    const next = current === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED';
+    dailyPlannerStore.markTopicMastered(topicId, next === 'COMPLETED');
+    soundService.playCheckSound();
+  };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16 animate-fade-in font-sans">
+    <div className="space-y-6 max-w-6xl mx-auto pb-16 font-sans text-gray-100">
       
-      {/* 1. Header: Clear & Human */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-[#0d1017] to-purple-950/30 border border-white/10 space-y-2">
+      {/* 1. Header Banner */}
+      <header className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-[#0d1017] to-purple-950/30 border border-white/10 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -27,222 +74,347 @@ export const CareerTimelinePage: React.FC = () => {
                 <Calendar size={18} />
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Career Timeline & Milestones
+                Master Career Roadmap
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-gray-400 mt-1">
-              Your step-by-step roadmap from TCS (₹7 LPA) to Product Company SDE-1 (₹25–45 LPA) by May–June 2027.
+              Deterministic beginner-to-advanced curriculum connecting DSA, Java Backend, and System Design (Oct 2026 – June 2027).
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5">
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5">
               <Target size={14} />
-              <span>Target: ₹{profile.targetCareer.targetCtcMinLpa}–{profile.targetCareer.targetCtcMaxLpa} LPA</span>
+              <span>Target: ₹25–45 LPA CTC by June 2027</span>
             </div>
           </div>
         </div>
 
-        {/* Schedule Context Banner */}
+        {/* Schedule & Office Context */}
         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-400">
           <div className="flex items-center gap-2">
             <Clock size={14} className="text-amber-400 shrink-0" />
             <span>
-              <strong className="text-gray-200">Office Schedule:</strong> 11:00 AM – 8:00 PM (TCS React Native Training). Self-study is focused in morning & evening blocks.
+              <strong className="text-gray-200">Workplace Shift:</strong> 11:00 AM – 8:00 PM (TCS React Native Training). Self-study roadmap executes in morning (DSA) and evening (Backend & System Design).
             </span>
           </div>
-          <span className="text-purple-300 font-mono font-semibold">
-            Timeline Horizon: Oct 2026 – June 2027
+          <span className="text-blue-300 font-mono font-semibold shrink-0">
+            Total Curriculum: {MASTER_ROADMAP_TOPICS.length} Milestones
           </span>
         </div>
-      </div>
+      </header>
 
-      {/* 2. Visual 6-Phase Horizontal Steps */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-          Roadmap Sequence (Click any phase to see exact milestones)
-        </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
-          {roadmap.map((phase) => {
+      {/* 2. Horizontal 5-Phase Selector */}
+      <section aria-label="Roadmap Phases Navigation">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+          {MASTER_ROADMAP_PHASES.map((phase) => {
             const isSelected = phase.id === selectedPhaseId;
-            const isCompleted = phase.milestones.every(m => m.status === 'COMPLETED');
-            const isCurrent = phase.id === 1 || phase.milestones.some(m => m.status === 'IN_PROGRESS');
+            const phaseTopics = MASTER_ROADMAP_TOPICS.filter(t => t.phase === phase.id);
+            const done = phaseTopics.filter(t => dailyPlannerStore.getTopicStatus(t.id) === 'COMPLETED').length;
+            const pct = phaseTopics.length > 0 ? Math.round((done / phaseTopics.length) * 100) : 0;
 
             return (
               <button
                 key={phase.id}
-                onClick={() => setSelectedPhaseId(phase.id)}
-                className={`p-3.5 rounded-xl text-left transition-all border flex flex-col justify-between min-h-[110px] cursor-pointer ${
+                onClick={() => {
+                  setSelectedPhaseId(phase.id);
+                  setSelectedTopicId(null);
+                  soundService.playCheckSound();
+                }}
+                className={`p-3.5 rounded-xl text-left border transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-600/20 border-blue-500 shadow-md text-white'
-                    : isCurrent
-                    ? 'bg-blue-950/20 border-blue-500/40 text-gray-200 hover:border-blue-500/60'
-                    : isCompleted
-                    ? 'bg-emerald-950/20 border-emerald-500/30 text-gray-300 hover:border-emerald-500/50'
-                    : 'bg-[#0d1017] border-white/10 text-gray-400 hover:border-white/20'
+                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-md'
+                    : 'bg-[#0d1017] border-white/10 hover:border-white/20 text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400">
-                      Phase {phase.id}
-                    </span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                      isCompleted 
-                        ? 'bg-emerald-500/20 text-emerald-300' 
-                        : isCurrent 
-                        ? 'bg-blue-500/20 text-blue-300' 
-                        : 'bg-white/10 text-gray-400'
-                    }`}>
-                      {isCompleted ? '✓ Done' : isCurrent ? 'Active' : 'Upcoming'}
-                    </span>
-                  </div>
-                  <div className="text-xs font-bold text-white mt-1.5 leading-snug line-clamp-2">
-                    {phase.title}
-                  </div>
-                </div>
-
-                <div className="text-[11px] font-mono text-gray-400 mt-2">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400">
                   {phase.timeRange}
+                </div>
+                <div className="font-bold text-xs sm:text-sm text-white mt-0.5 truncate">
+                  {phase.title}
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 mt-2">
+                  <span>{done}/{phaseTopics.length} done</span>
+                  <span className={pct === 100 ? 'text-emerald-400 font-bold' : ''}>{pct}%</span>
+                </div>
+                <div className="w-full h-1 rounded-full bg-white/10 mt-1.5 overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${pct === 100 ? 'bg-emerald-400' : 'bg-blue-500'}`}
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* 3. Detailed Selected Phase Card */}
-      {selectedPhase && (
-        <Card className="p-5 sm:p-6 bg-[#0d1017] border-white/10 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  Phase {selectedPhase.id}
-                </span>
-                <span className="text-xs text-gray-400 font-mono">
-                  {selectedPhase.timeRange}
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-black text-white mt-2">
-                {selectedPhase.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-300 mt-1 leading-relaxed">
-                {selectedPhase.goal}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="primary"
-                onClick={() => navigate('/sprint')}
-                className="text-xs min-h-[44px] flex items-center gap-2"
-              >
-                <Code size={14} />
-                <span>Open Topic Checklist</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Concrete Deliverable & Exit Criteria */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-500/30 space-y-2">
-            <div className="text-xs font-bold text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-400" />
-              <span>Phase Deliverable & Proof of Completion</span>
-            </div>
-            <p className="text-xs sm:text-sm text-white font-medium leading-relaxed">
+      {/* 3. Phase Mission & Track Filter */}
+      <section className="p-4 sm:p-5 rounded-2xl bg-[#0d1017] border border-white/10 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+          <div>
+            <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+              {selectedPhase.timeRange}
+            </span>
+            <h2 className="text-lg font-black text-white">
+              {selectedPhase.title}
+            </h2>
+            <p className="text-xs text-gray-300 mt-0.5 max-w-3xl leading-relaxed">
+              <strong className="text-gray-100">Phase Goal: </strong>
+              {selectedPhase.goal}
+            </p>
+            <p className="text-xs text-emerald-300 mt-0.5 max-w-3xl leading-relaxed font-mono">
+              <strong>Deliverable: </strong>
               {selectedPhase.deliverable}
             </p>
           </div>
 
-          {/* Milestones in this Phase */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-              Concrete Milestones to Complete ({selectedPhase.milestones.length})
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {selectedPhase.milestones.map((m, idx) => (
-                <div key={m.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-[10px]">
-                        {idx + 1}
-                      </span>
-                      <span>{m.title}</span>
-                    </span>
-                    <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold ${
-                      m.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-300' :
-                      m.status === 'IN_PROGRESS' ? 'bg-blue-500/20 text-blue-300' : 'bg-white/10 text-gray-400'
-                    }`}>
-                      {m.status}
-                    </span>
-                  </div>
+          {/* Track Filter */}
+          <div className="flex items-center gap-1 self-start sm:self-center p-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono">
+            {(['ALL', 'DSA', 'BACKEND', 'SYSTEM_DESIGN'] as const).map(track => (
+              <button
+                key={track}
+                onClick={() => setSelectedTrack(track)}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                  selectedTrack === track
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {track === 'ALL' ? 'All Tracks' : track === 'SYSTEM_DESIGN' ? 'System Design' : track}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    {m.description}
-                  </p>
-
-                  <div className="p-2 rounded-lg bg-black/40 text-[11px] text-emerald-300 font-mono border border-white/5">
-                    <strong>Deliverable:</strong> {m.concreteDeliverable}
-                  </div>
-                </div>
-              ))}
+        {/* 4. Split Layout: Topic List on Left, Topic Deep Dive Details on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-1">
+          
+          {/* Left Column: Topics List */}
+          <div className="lg:col-span-5 space-y-2 max-h-[600px] overflow-y-auto pr-1">
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Milestones ({filteredTopics.length})</span>
+              <span className="text-gray-500 font-mono text-[11px]">Select to view detail</span>
             </div>
+
+            {filteredTopics.map((topic) => {
+              const status = dailyPlannerStore.getTopicStatus(topic.id);
+              const isSelected = topic.id === activeTopic.id;
+              const isCompleted = status === 'COMPLETED';
+
+              return (
+                <div
+                  key={topic.id}
+                  onClick={() => setSelectedTopicId(topic.id)}
+                  className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-950/30 border-blue-500 shadow-sm'
+                      : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleTopic(topic.id);
+                      }}
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                        isCompleted
+                          ? 'bg-emerald-600 border-emerald-500 text-white'
+                          : 'border-white/20 hover:border-white/40 text-transparent'
+                      }`}
+                      title={isCompleted ? 'Mark incomplete' : 'Mark completed'}
+                    >
+                      <Check size={12} />
+                    </button>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs font-bold truncate ${isCompleted ? 'line-through text-gray-500' : 'text-gray-100'}`}>
+                          {topic.title}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono text-gray-400 truncate mt-0.5">
+                        {topic.stage} • {topic.estimatedEffort}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                    topic.track === 'DSA'
+                      ? 'bg-purple-500/10 text-purple-300'
+                      : topic.track === 'BACKEND'
+                      ? 'bg-blue-500/10 text-blue-300'
+                      : 'bg-cyan-500/10 text-cyan-300'
+                  }`}>
+                    {topic.track}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Quick Jump Links to Dedicated Practice Tools */}
-          <div className="pt-2 border-t border-white/10 space-y-2">
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-              Work on this phase using dedicated pages:
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={() => navigate('/dsa')}
-                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Brain size={16} className="text-purple-400" />
-                  <div>
-                    <div className="text-xs font-bold text-white">DSA Practice Sheet</div>
-                    <div className="text-[10px] text-gray-400">Solve daily patterns</div>
-                  </div>
+          {/* Right Column: Detailed Curriculum Card for Active Topic */}
+          <div className="lg:col-span-7 bg-white/[0.02] border border-white/10 rounded-2xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    activeTopic.track === 'DSA'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : activeTopic.track === 'BACKEND'
+                      ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  }`}>
+                    {activeTopic.track} • {activeTopic.stage}
+                  </span>
+                  <span className="text-xs font-mono text-gray-400">
+                    Est: {activeTopic.estimatedEffort}
+                  </span>
                 </div>
-                <ChevronRight size={14} className="text-gray-500" />
-              </button>
 
-              <button
-                onClick={() => navigate('/system-design')}
-                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Building2 size={16} className="text-sky-400" />
-                  <div>
-                    <div className="text-xs font-bold text-white">System Design Studio</div>
-                    <div className="text-[10px] text-gray-400">HLD, LLD & Tradeoffs</div>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-gray-500" />
-              </button>
+                <h3 className="text-lg font-bold text-white mt-1.5 leading-snug">
+                  {activeTopic.title}
+                </h3>
+              </div>
 
+              {/* Status Toggle Button */}
               <button
-                onClick={() => navigate('/job-pipeline')}
-                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all flex items-center justify-between cursor-pointer"
+                onClick={() => handleToggleTopic(activeTopic.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  dailyPlannerStore.getTopicStatus(activeTopic.id) === 'COMPLETED'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white/10 hover:bg-white/20 text-gray-200'
+                }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Briefcase size={16} className="text-emerald-400" />
-                  <div>
-                    <div className="text-xs font-bold text-white">Target Job Pipeline</div>
-                    <div className="text-[10px] text-gray-400">Product company openings</div>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-gray-500" />
+                {dailyPlannerStore.getTopicStatus(activeTopic.id) === 'COMPLETED' ? '✓ Completed' : 'Mark Complete'}
               </button>
             </div>
+
+            {/* Explanation & Why it matters */}
+            <div className="space-y-2 text-xs leading-relaxed text-gray-300">
+              <p>
+                <strong className="text-white">Explanation: </strong>
+                {activeTopic.shortExplanation}
+              </p>
+              <p>
+                <strong className="text-blue-300">Why this matters: </strong>
+                {activeTopic.whyItMatters}
+              </p>
+            </div>
+
+            {/* Prerequisites */}
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-300 space-y-1">
+              <span className="font-bold text-gray-200 flex items-center gap-1.5">
+                <AlertCircle size={13} className="text-amber-400" />
+                <span>Prerequisites:</span>
+              </span>
+              <div className="text-gray-400 font-mono text-[11px]">
+                {activeTopic.prerequisites.length === 0
+                  ? 'None (Foundational entry point)'
+                  : activeTopic.prerequisites.map(p => {
+                      const prereq = MASTER_ROADMAP_TOPICS.find(t => t.id === p);
+                      const isMet = dailyPlannerStore.getTopicStatus(p) === 'COMPLETED';
+                      return (
+                        <span key={p} className={`inline-block mr-2 ${isMet ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {isMet ? '✓' : '○'} {prereq ? prereq.title : p}
+                        </span>
+                      );
+                    })}
+              </div>
+            </div>
+
+            {/* Learning Objectives */}
+            <div className="space-y-1.5 text-xs">
+              <span className="font-bold text-gray-200">Learning Objectives:</span>
+              <ul className="space-y-1 text-gray-300 text-[11px] list-disc list-inside">
+                {activeTopic.learningObjectives.map((obj, i) => (
+                  <li key={i}>{obj}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Resources & Practice Exercises */}
+            <div className="space-y-2 pt-1 border-t border-white/5 text-xs">
+              <span className="font-bold text-gray-200 flex items-center gap-1.5">
+                <BookOpen size={13} className="text-blue-400" />
+                <span>Recommended Resources & Exercises:</span>
+              </span>
+
+              <div className="space-y-1.5">
+                {activeTopic.resources.map((res, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/5 text-[11px]">
+                    <span className="text-gray-200">{res.title}</span>
+                    {res.url ? (
+                      <a 
+                        href={res.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                      >
+                        <span>Open</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    ) : (
+                      <span className="text-gray-500 font-mono text-[10px]">{res.type}</span>
+                    )}
+                  </div>
+                ))}
+
+                {activeTopic.practiceExercises.map((ex, i) => (
+                  <div key={i} className="p-2 rounded-lg bg-white/5 text-[11px] space-y-0.5">
+                    <div className="font-bold text-purple-300 flex items-center justify-between">
+                      <span>Practice: {ex.title}</span>
+                      {ex.practiceUrl && (
+                        <a 
+                          href={ex.practiceUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                        >
+                          <span>Solve</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                    <div className="text-gray-400">{ex.description}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Completion Criteria */}
+            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-200 space-y-1">
+              <span className="font-bold flex items-center gap-1.5 text-emerald-300">
+                <CheckCircle2 size={13} />
+                <span>Clear Completion Criteria:</span>
+              </span>
+              <ul className="text-gray-300 text-[11px] list-disc list-inside space-y-0.5">
+                {activeTopic.completionCriteria.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Link to Dedicated Hub */}
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => {
+                  if (activeTopic.track === 'DSA') navigate('/dsa');
+                  else if (activeTopic.track === 'BACKEND') navigate('/backend');
+                  else navigate('/system-design');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Open Dedicated {activeTopic.track} Studio</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+
           </div>
-        </Card>
-      )}
+
+        </div>
+      </section>
 
     </div>
   );

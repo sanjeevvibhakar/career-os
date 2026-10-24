@@ -409,37 +409,37 @@ export const SchedulePage: React.FC = () => {
             <div className="space-y-2.5 pt-1 text-xs">
               <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/20">
                 <div className="font-bold text-purple-300 flex items-center gap-1">
-                  <Brain size={12} /> 07:45 – 08:15 (Morning DSA)
+                  <Brain size={12} /> 08:30 – 10:15 (Morning DSA Deep Block)
                 </div>
                 <div className="text-[11px] text-gray-400 mt-0.5">
-                  Peak working memory before workplace slack messages drain prefrontal bandwidth.
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-orange-950/20 border border-orange-500/20">
-                <div className="font-bold text-orange-300 flex items-center gap-1">
-                  <Dumbbell size={12} /> 06:00 – 07:00 (Physical Engine)
-                </div>
-                <div className="text-[11px] text-gray-400 mt-0.5">
-                  Releases BDNF and dopamine, priming the brain for long-term algorithmic recall.
+                  Fresh cognitive bandwidth for algorithmic problem solving before the office shift begins.
                 </div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-blue-950/20 border border-blue-500/20">
                 <div className="font-bold text-blue-300 flex items-center gap-1">
-                  <Zap size={12} /> 19:45 – 21:15 (Ultradian Cycle)
+                  <Briefcase size={12} /> 11:00 – 20:00 (TCS Training Shift)
                 </div>
                 <div className="text-[11px] text-gray-400 mt-0.5">
-                  90-minute uninterrupted deep work block dedicated to System Design & Technology Syllabus.
+                  Office workplace training period on React Native frontend development.
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/20">
+                <div className="font-bold text-purple-300 flex items-center gap-1">
+                  <Zap size={12} /> 20:45 – 22:15 (Evening Backend & System Design)
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5">
+                  90-minute uninterrupted deep work block dedicated to Spring Boot & System Design.
                 </div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-emerald-950/20 border border-emerald-500/20">
                 <div className="font-bold text-emerald-300 flex items-center gap-1">
-                  <Moon size={12} /> 22:30 (Sleep Hard Stop)
+                  <Moon size={12} /> 22:45 – 06:30 (Sleep Hard Stop)
                 </div>
                 <div className="text-[11px] text-gray-400 mt-0.5">
-                  REM sleep consolidates memory patterns. Studying past 11 PM creates diminishing returns.
+                  Deep sleep consolidates neural connections and physical recovery.
                 </div>
               </div>
             </div>
