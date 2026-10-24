@@ -7,12 +7,14 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDailyStore } from '../../stores/dailyStore';
+import { useCareerStore } from '../../stores/careerStore';
+import { generateWeeklyIntelligenceReport } from '../../engine/weeklyReportEngine';
 import { soundService } from '../../services/soundService';
 import { generateWeeklyReviewSummary } from '../../services/aiService';
 import { 
   Sparkles, CheckCircle2, ChevronLeft, ChevronRight, Trophy, Flame, 
   Brain, Dumbbell, BookOpen, Mic, Calendar, TrendingUp, History, 
-  Award, ArrowRight, Wand2
+  Award, ArrowRight, Wand2, AlertTriangle, ShieldAlert, CheckCircle
 } from 'lucide-react';
 
 export const WeeklyReviewPage: React.FC = () => {
@@ -20,6 +22,7 @@ export const WeeklyReviewPage: React.FC = () => {
   const dsaStore = useDsaStore();
   const syllabusStore = useSyllabusStore();
   const dailyStore = useDailyStore();
+  const careerStore = useCareerStore();
 
   // Week calculation helpers (Monday to Sunday)
   const getMonday = (d: Date) => {
@@ -154,6 +157,31 @@ export const WeeklyReviewPage: React.FC = () => {
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
+
+  const intelligenceReport = useMemo(() => {
+    return generateWeeklyIntelligenceReport({
+      skills: careerStore.skills,
+      attempts: dsaStore.attempts,
+      revisions: dsaStore.revisions,
+      project: careerStore.project,
+      evidence: careerStore.evidence,
+      jobs: careerStore.jobs,
+      mocks: careerStore.mockSessions,
+      studyMinutesThisWeek: (formData.techHours + formData.projectHours) * 60,
+      averageFatigueRating: formData.sleepAvg < 7 ? 3.5 : 2.0,
+    });
+  }, [
+    careerStore.skills,
+    dsaStore.attempts,
+    dsaStore.revisions,
+    careerStore.project,
+    careerStore.evidence,
+    careerStore.jobs,
+    careerStore.mockSessions,
+    formData.techHours,
+    formData.projectHours,
+    formData.sleepAvg,
+  ]);
 
   // 1-Click Autofill Reflection from Real Logs
   const handleAutofillFromLogs = () => {
@@ -354,6 +382,78 @@ export const WeeklyReviewPage: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* 2.5 Automated Career Intelligence Audit */}
+      <div className="p-5 rounded-2xl bg-[#0b0e14] border border-blue-500/30 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse" />
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <span>Automated Career Intelligence Audit</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono font-normal">
+                Evidence-Derived (No Speculation)
+              </span>
+            </h2>
+          </div>
+          <div className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold border ${
+            intelligenceReport.sustainability.workloadEvaluation === 'BALANCED'
+              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              : intelligenceReport.sustainability.workloadEvaluation === 'ELEVATED'
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+          }`}>
+            Capacity: {intelligenceReport.sustainability.workloadEvaluation.replace('_', ' ')}
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-300 leading-relaxed font-sans">
+          {intelligenceReport.sustainability.advice}
+        </p>
+
+        {/* 2-3 Real Bottlenecks */}
+        <div className="space-y-2">
+          <div className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+            <AlertTriangle size={14} />
+            <span>Active Engineering Bottlenecks ({intelligenceReport.bottlenecks.length} Identified)</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {intelligenceReport.bottlenecks.map((b) => (
+              <div key={b.id} className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1.5 text-xs">
+                <div className="font-semibold text-amber-200">{b.area}</div>
+                <div className="text-[11px] text-gray-300"><span className="text-gray-400">Diagnosis:</span> {b.evidenceBasedIssue}</div>
+                <div className="text-[11px] text-emerald-300 font-mono bg-emerald-950/30 p-1.5 rounded border border-emerald-500/20">
+                  Fix: {b.concreteRemedy}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Next Week Concrete Plan */}
+        <div className="p-3.5 rounded-xl bg-blue-950/20 border border-blue-500/20 space-y-2">
+          <div className="text-xs font-bold text-blue-300 uppercase tracking-wider">
+            Next Week's Calibrated Strategic Focus
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">DSA Target</div>
+              <div className="font-semibold text-blue-200 mt-0.5 truncate">{intelligenceReport.nextWeekPlan.dsaPriorities.join(', ') || '1 problem daily'}</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Backend Focus</div>
+              <div className="font-semibold text-purple-200 mt-0.5 truncate">{intelligenceReport.nextWeekPlan.primaryTechnicalFocus}</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Flagship Milestone</div>
+              <div className="font-semibold text-emerald-200 mt-0.5 truncate">{intelligenceReport.nextWeekPlan.concreteProjectOutcome}</div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Interview Vocalization</div>
+              <div className="font-semibold text-amber-200 mt-0.5 truncate">{intelligenceReport.nextWeekPlan.interviewCommunicationExercise}</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 3. 5-Pillar Telemetry Grid (100% Auto-Calculated) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">

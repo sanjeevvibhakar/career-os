@@ -27,6 +27,10 @@ import { WeeklyReviewPage } from './pages/private/WeeklyReviewPage';
 import { ProfileEditPage } from './pages/private/ProfileEditPage';
 import { FlashcardsPage } from './pages/private/FlashcardsPage';
 import { SystemDesignPage } from './pages/private/SystemDesignPage';
+import { CareerSkillTreePage } from './pages/private/CareerSkillTreePage';
+import { ProjectMilestonesPage } from './pages/private/ProjectMilestonesPage';
+import { JobPipelinePage } from './pages/private/JobPipelinePage';
+import { InterviewReadinessPage } from './pages/private/InterviewReadinessPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
@@ -55,6 +59,10 @@ export const App: React.FC = () => {
         {/* Private Routes */}
         <Route element={<PrivateRoute><PrivateLayout /></PrivateRoute>}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/skills-tree" element={<CareerSkillTreePage />} />
+          <Route path="/project-tracker" element={<ProjectMilestonesPage />} />
+          <Route path="/job-pipeline" element={<JobPipelinePage />} />
+          <Route path="/interview-readiness" element={<InterviewReadinessPage />} />
           <Route path="/dsa" element={<DSATrackerPage />} />
           <Route path="/sprint" element={<TechSprintPage />} />
           <Route path="/journal" element={<JournalPage />} />
