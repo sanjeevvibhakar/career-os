@@ -9,6 +9,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { ConfidenceStars } from '../../components/shared/ConfidenceStars';
 import { RoadmapModal } from '../../components/dashboard/RoadmapModal';
 import { DailyBattleBoard } from '../../components/dashboard/DailyBattleBoard';
+import { CareerIntelligenceCard } from '../../components/dashboard/CareerIntelligenceCard';
 import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
 import { InterviewReadinessModal } from '../../components/shared/InterviewReadinessModal';
 import { AiCoachModal } from '../../components/shared/AiCoachModal';
@@ -534,6 +535,9 @@ create policy "Allow public access" on career_os_sync for all using (true) with 
           </div>
         </div>
       </div>
+
+      {/* Career Intelligence Engine Core - Answers the 6 Operational Questions */}
+      <CareerIntelligenceCard />
 
       {/* 3. Daily Battle Board (5 Disciplines, 1-Tap Quick Actions & Modals) */}
       <DailyBattleBoard
