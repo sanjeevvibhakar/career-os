@@ -3,29 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Brain, Code, Calendar, Target, Clock, ArrowRight, 
   Sparkles, ShieldCheck, Briefcase, Award, Building2, 
-  Flame, CheckCircle2, RefreshCw, Volume2, VolumeX, Zap, BookOpen, Layers
+  CheckCircle2, Volume2, VolumeX, Zap, AlertTriangle, ChevronDown, ChevronUp, Check, RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCareerStore } from '../../stores/careerStore';
 import { useDsaStore } from '../../stores/dsaStore';
 import { useSyllabusStore } from '../../stores/syllabusStore';
 import { useDailyStore } from '../../stores/dailyStore';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { FocusTimerModal } from '../../components/shared/FocusTimerModal';
+import { useDashboardStore } from '../../stores/dashboardStore';
+import { computeIntelligenceRecommendations } from '../../engine/intelligenceEngine';
+import { TaskExecutionModal } from '../../components/shared/TaskExecutionModal';
 import { soundService } from '../../services/soundService';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { userName } = useAuthStore();
-  const { profile, roadmap } = useCareerStore();
+  const { profile, skills, roadmap, project } = useCareerStore();
   const dsaStore = useDsaStore();
   const syllabusStore = useSyllabusStore();
   const dailyStore = useDailyStore();
+  const dashboardStore = useDashboardStore();
 
-  const [timerModalOpen, setTimerModalOpen] = useState(false);
-  const [timerTaskTitle, setTimerTaskTitle] = useState('Daily Focus Block');
   const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
+  const [executionModalOpen, setExecutionModalOpen] = useState(false);
+  const [selectedExecutionTask, setSelectedExecutionTask] = useState<any>(null);
+  const [showExtendedPlan, setShowExtendedPlan] = useState(false);
+  const [showAlternativeSelector, setShowAlternativeSelector] = useState(false);
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -34,397 +37,513 @@ export const DashboardPage: React.FC = () => {
     if (next) soundService.playCheckSound();
   };
 
-  // Next Pending DSA Focus Problem
-  const pendingDsaProblem = useMemo(() => {
-    const due = dsaStore.getDueRevisions();
-    if (due.length > 0) {
-      const match = dsaStore.problems.find(p => p.id === due[0].problemId);
+  // 1. Dynamic Task Recommendation Engine (Deterministic & grounded)
+  const dueRevisions = dsaStore.getDueRevisions();
+  const patternAnalysis = dsaStore.getPatternAnalysis();
+
+  const engineOutput = useMemo(() => {
+    return computeIntelligenceRecommendations({
+      profile,
+      skills,
+      roadmap,
+      project,
+      dueRevisions,
+      weakPatterns: patternAnalysis.weakPatterns,
+      recurringMistakes: patternAnalysis.recurringMistakes,
+    });
+  }, [profile, skills, roadmap, project, dueRevisions, patternAnalysis]);
+
+  const { currentContext, primaryRecommendation, alternativeRecommendations, detectedBottlenecks } = engineOutput;
+
+  // Selected Primary Task (allows user to swap to fallback or alternative)
+  const [customPrimaryId, setCustomPrimaryId] = useState<string | null>(null);
+
+  const activePrimaryTask = useMemo(() => {
+    if (customPrimaryId) {
+      const alt = alternativeRecommendations.find(a => a.id === customPrimaryId);
+      if (alt) return alt;
+    }
+    return primaryRecommendation;
+  }, [customPrimaryId, primaryRecommendation, alternativeRecommendations]);
+
+  // 2. Today's Plan (Maximum 3 Tasks by default)
+  const todayDateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Pending DSA problem
+  const nextDsa = useMemo(() => {
+    if (dueRevisions.length > 0) {
+      const match = dsaStore.problems.find(p => p.id === dueRevisions[0].problemId);
       if (match) return { problem: match, isRevision: true };
     }
     const unsolved = dsaStore.problems.find(p => !dsaStore.attempts.some(a => a.problemId === p.id));
     return { problem: unsolved || dsaStore.problems[0], isRevision: false };
-  }, [dsaStore.problems, dsaStore.attempts]);
+  }, [dsaStore.problems, dsaStore.attempts, dueRevisions]);
 
-  // Next Pending Backend Topic
-  const nextBackendTopic = useMemo(() => {
+  // Pending Backend topic
+  const nextBackend = useMemo(() => {
     return syllabusStore.getNextPendingItem();
   }, [syllabusStore]);
 
-  // Current Roadmap Phase (Phase 1: Oct - Dec 2026)
-  const currentPhase = roadmap.find(p => p.id === 1) || roadmap[0];
+  // Core 3 Daily Tasks
+  const coreDailyTasks = useMemo(() => {
+    const dsaDone = dsaStore.attempts.some(a => a.attemptedAt.startsWith(new Date().toISOString().split('T')[0]));
+    const backendDone = nextBackend ? syllabusStore.isCompleted(nextBackend.id) : false;
+    const commDone = false;
 
-  const handleStartFocus = (task: string) => {
-    setTimerTaskTitle(task);
-    setTimerModalOpen(true);
+    return [
+      {
+        id: 'task-dsa',
+        category: 'DSA Practice',
+        title: nextDsa.problem.name,
+        subtitle: `${nextDsa.problem.pattern} • ${nextDsa.problem.difficulty}`,
+        durationMin: 45,
+        completed: dsaDone,
+        actionRoute: '/dsa',
+        reason: 'Maintains algorithmic pattern recognition outside work hours.',
+        successCriteria: 'Solve in under 30 minutes with optimal time and space complexity.',
+        evidenceToCapture: 'Log mistake category and code complexity in DSA Tracker.'
+      },
+      {
+        id: 'task-backend',
+        category: 'Java / Backend',
+        title: nextBackend ? nextBackend.subtopic : 'Spring Boot Global Exception Handling',
+        subtitle: nextBackend ? `Week ${nextBackend.weekNumber} • ${nextBackend.topic}` : 'Spring Boot Architecture',
+        durationMin: 45,
+        completed: backendDone,
+        actionRoute: '/sprint',
+        reason: 'Advances active flagship milestone and closes key backend engineering gaps.',
+        successCriteria: 'Understand annotations, write unit test, and verify error responses.',
+        evidenceToCapture: 'Attach GitHub commit or test result to Evidence Vault.'
+      },
+      {
+        id: 'task-comm',
+        category: 'Communication Drill',
+        title: 'Technical Pitch & Architecture Vocalization',
+        subtitle: '10-minute speech rehearsal',
+        durationMin: 10,
+        completed: commDone,
+        actionRoute: '/communication',
+        reason: 'Engineers who speak clearly stand out in product company interviews.',
+        successCriteria: 'Explain your current project architecture out loud without filler words.',
+        evidenceToCapture: 'Record 60-second audio snippet in Speech Studio.'
+      }
+    ];
+  }, [nextDsa, nextBackend, dsaStore.attempts, syllabusStore]);
+
+  // Handle Starting Task in Execution Modal
+  const handleOpenExecution = (task: any) => {
+    setSelectedExecutionTask({
+      id: task.id || activePrimaryTask.id,
+      title: task.taskTitle || task.title,
+      skill: task.skill || task.category,
+      estimatedMinutes: task.estimatedDurationMin || task.durationMin || 45,
+      reason: task.reason,
+      successCriteria: task.successCriteria || 'Complete implementation with verified test cases.',
+      evidenceToCapture: task.evidenceToCapture || 'Log evidence in your vault.',
+      fallbackTask: task.fallbackTask ? {
+        title: task.fallbackTask.taskTitle,
+        estimatedMinutes: task.fallbackTask.estimatedDurationMin
+      } : undefined,
+      actionRoute: task.actionRoute
+    });
+    setExecutionModalOpen(true);
   };
 
+  // Record Task Outcome
+  const handleTaskComplete = (notes: string, evidenceUrl?: string) => {
+    if (selectedExecutionTask?.id === 'task-backend' && nextBackend) {
+      syllabusStore.toggleItem(nextBackend.id);
+    }
+    dashboardStore.updateStreak('learning');
+    soundService.playCheckSound();
+  };
+
+  const handleTaskPartial = (notes: string) => {
+    // Keep pending for next block
+  };
+
+  const handleTaskBlocked = (reason: string) => {
+    if (activePrimaryTask.fallbackTask) {
+      // Automatically swap to fallback task
+      setCustomPrimaryId(null);
+    }
+  };
+
+  // Top Bottleneck (Show at most 1 on Home)
+  const topBottleneck = detectedBottlenecks.length > 0 ? detectedBottlenecks[0] : null;
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-16 animate-fade-in font-sans">
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto pb-20 animate-fade-in font-sans">
       
-      {/* 1. Clean, Friendly Welcome Header */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-[#0d1017] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* SECTION A: Compact Header (Consumes minimal vertical space) */}
+      <header className="flex items-center justify-between py-2 px-1 border-b border-white/5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Welcome back, {userName || 'Sanjeev'}
-            </h1>
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-xs font-black uppercase tracking-wider text-white">Career OS</span>
+            <span className="text-gray-500">•</span>
+            <span className="text-xs text-gray-400 font-medium">Hello, {userName || 'Sanjeev'}</span>
           </div>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">
-            Product SDE-1 Goal: <span className="text-emerald-400 font-bold font-mono">₹25–45 LPA CTC</span> by <span className="text-purple-300 font-medium">May–June 2027</span>.
-          </p>
+          <div className="text-[11px] text-gray-500 font-mono mt-0.5">
+            {todayDateStr} • TCS Shift: 11 AM – 8 PM
+          </div>
         </div>
 
-        {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono font-semibold">
-            TCS Office: 11 AM – 8 PM
-          </div>
+        <div className="flex items-center gap-1.5">
           <button
             onClick={toggleSound}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
-            title={soundEnabled ? 'Mute Sound' : 'Enable Sound'}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            title={soundEnabled ? 'Mute Audio' : 'Enable Audio'}
+            aria-label="Toggle Sound"
           >
-            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* 2. Today's Two Core Focus Tasks (Clean & Simple) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Zap size={14} className="text-amber-400" />
-            <span>Today's Two Priority Tasks (Doable in 1.5 Hours Outside Work)</span>
-          </h2>
-          <span className="text-xs text-gray-500">Morning & Evening Blocks</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* SECTION B: Today's Primary Focus (The ONLY Hero Card on Screen) */}
+      <section aria-label="Today's Primary Focus">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-950/40 via-[#0d1017] to-purple-950/30 border border-blue-500/40 shadow-xl space-y-3 relative overflow-hidden">
           
-          {/* Focus Task A: DSA */}
-          <Card className="p-5 bg-gradient-to-br from-purple-950/20 via-[#0d1017] to-transparent border-purple-500/30 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="px-2 py-0.5 rounded font-mono font-bold bg-purple-500/20 text-purple-300">
-                  {pendingDsaProblem.isRevision ? '🔁 Spaced Revision' : '🧠 Algorithmic Problem'}
-                </span>
-                <span className="text-gray-400 font-mono">Est. 45 mins</span>
-              </div>
-
-              <h3 className="text-base sm:text-lg font-bold text-white mt-2">
-                {pendingDsaProblem.problem.name}
-              </h3>
-              
-              <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 font-mono">
-                <span className="text-purple-400 font-semibold">{pendingDsaProblem.problem.pattern}</span>
-                <span>•</span>
-                <span className={`font-bold ${
-                  pendingDsaProblem.problem.difficulty === 'EASY' ? 'text-emerald-400' :
-                  pendingDsaProblem.problem.difficulty === 'MEDIUM' ? 'text-amber-400' : 'text-rose-400'
-                }`}>
-                  {pendingDsaProblem.problem.difficulty}
-                </span>
-                <span>•</span>
-                <span>{pendingDsaProblem.problem.source}</span>
-              </div>
-
-              <p className="text-xs text-gray-300 mt-2 leading-relaxed">
-                Solve independently in under 30 minutes. Focus on time and space complexity explanation.
-              </p>
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px]">
+                TODAY'S #1 PRIORITY
+              </span>
+              <span className="text-gray-400 font-mono text-[11px] hidden sm:inline">
+                {activePrimaryTask.skill}
+              </span>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-              <Button
-                variant="primary"
-                onClick={() => navigate('/dsa')}
-                className="flex-1 text-xs justify-center min-h-[42px]"
-              >
-                <span>Open DSA Tracker</span>
-                <ArrowRight size={14} className="ml-1" />
-              </Button>
-              <button
-                onClick={() => handleStartFocus(`DSA: ${pendingDsaProblem.problem.name}`)}
-                className="px-3 py-2 min-h-[42px] rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                title="Start 45m Focus Timer"
-              >
-                <Clock size={14} />
-                <span>Timer</span>
-              </button>
+            <div className="flex items-center gap-1 text-gray-400 font-mono text-xs">
+              <Clock size={12} className="text-blue-400" />
+              <span>{activePrimaryTask.estimatedDurationMin} mins</span>
             </div>
-          </Card>
+          </div>
 
-          {/* Focus Task B: Backend Topic */}
-          <Card className="p-5 bg-gradient-to-br from-blue-950/20 via-[#0d1017] to-transparent border-blue-500/30 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="px-2 py-0.5 rounded font-mono font-bold bg-blue-500/20 text-blue-300">
-                  ☕ Java & Spring Boot Topic
-                </span>
-                <span className="text-gray-400 font-mono">Est. 45 mins</span>
-              </div>
-
-              <h3 className="text-base sm:text-lg font-bold text-white mt-2">
-                {nextBackendTopic ? nextBackendTopic.subtopic : 'Spring Boot Global Exception Handling'}
-              </h3>
-              
-              <div className="text-xs text-blue-400 mt-1 font-mono font-semibold">
-                {nextBackendTopic ? `Week ${nextBackendTopic.weekNumber} • ${nextBackendTopic.topic}` : 'Spring Boot & Database Transactions'}
-              </div>
-
-              <p className="text-xs text-gray-300 mt-2 leading-relaxed">
-                {nextBackendTopic ? nextBackendTopic.keyTakeaway : 'Understand key annotations, test edge cases, and attach evidence to your portfolio.'}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-              <Button
-                variant="primary"
-                onClick={() => navigate('/sprint')}
-                className="flex-1 text-xs justify-center min-h-[42px]"
-              >
-                <span>Open Backend Syllabus</span>
-                <ArrowRight size={14} className="ml-1" />
-              </Button>
-              <button
-                onClick={() => handleStartFocus(`Backend: ${nextBackendTopic?.subtopic || 'Spring Boot'}`)}
-                className="px-3 py-2 min-h-[42px] rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                title="Start 45m Focus Timer"
-              >
-                <Clock size={14} />
-                <span>Timer</span>
-              </button>
-            </div>
-          </Card>
-
-        </div>
-      </div>
-
-      {/* 3. Your Timeline at a Glance */}
-      <Card className="p-5 bg-[#0d1017] border-white/10 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
           <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <Calendar size={16} className="text-blue-400" />
-              <span>Career Roadmap Timeline (Oct 2026 – June 2027)</span>
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Current Active Stage: <strong className="text-blue-300">{currentPhase?.title}</strong> ({currentPhase?.timeRange})
+            <h1 className="text-base sm:text-lg font-black text-white leading-tight">
+              {activePrimaryTask.taskTitle}
+            </h1>
+            <p className="text-xs text-gray-300 mt-1 leading-relaxed">
+              <strong className="text-blue-300 font-semibold">Why this task: </strong>
+              {activePrimaryTask.reason}
             </p>
           </div>
 
-          <button
-            onClick={() => navigate('/timeline')}
-            className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
-          >
-            <span>View Full Timeline & Topics</span>
-            <ArrowRight size={13} />
-          </button>
-        </div>
-
-        {/* 6 Step Indicators */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {roadmap.map((phase) => {
-            const isCurrent = phase.id === 1;
-            const isCompleted = phase.milestones.every(m => m.status === 'COMPLETED');
-            return (
-              <div 
-                key={phase.id}
-                onClick={() => navigate('/timeline')}
-                className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                  isCurrent 
-                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
-                    : isCompleted
-                    ? 'bg-emerald-950/20 border-emerald-500/30 text-gray-300'
-                    : 'bg-white/[0.02] border-white/5 text-gray-500 hover:text-gray-300'
-                }`}
+          {/* Action Row */}
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-white/10">
+            <div className="text-[11px] text-gray-400">
+              <button
+                onClick={() => setShowAlternativeSelector(prev => !prev)}
+                className="hover:text-blue-300 underline transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <div className="text-[10px] font-mono font-bold uppercase text-blue-400">Phase {phase.id}</div>
-                <div className="font-semibold text-white truncate mt-0.5">{phase.title}</div>
-                <div className="text-[10px] text-gray-400 font-mono mt-1">{phase.timeRange}</div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* 4. Dedicated Sections Hub (Clear Buttons to Each Dedicated Page) */}
-      <div className="space-y-3">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-          Dedicated Practice & Career Pages
-        </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          
-          {/* Hub Item 1: DSA Sheet */}
-          <div 
-            onClick={() => navigate('/dsa')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-purple-500/40 hover:bg-purple-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Brain size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">DSA Practice Sheet</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                Categorized problems, pattern recognition, and adaptive revision intervals.
-              </p>
+                <span>Swap task / view fallback ({activePrimaryTask.fallbackTask?.estimatedDurationMin || 25}m)</span>
+                {showAlternativeSelector ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
             </div>
-            <div className="text-xs font-bold text-purple-400 flex items-center gap-1">
-              <span>Open DSA Page</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => handleOpenExecution(activePrimaryTask)}
+                className="flex-1 sm:flex-none min-h-[44px] px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 cursor-pointer"
+                aria-label={`Start task: ${activePrimaryTask.taskTitle}`}
+              >
+                <span>Start Task</span>
+                <ArrowRight size={14} />
+              </button>
             </div>
           </div>
 
-          {/* Hub Item 2: Backend Syllabus */}
-          <div 
-            onClick={() => navigate('/sprint')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-blue-500/40 hover:bg-blue-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Code size={18} />
+          {/* Collapsible Alternative Tasks Drawer */}
+          {showAlternativeSelector && (
+            <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2 text-xs pt-3">
+              <span className="text-[10px] uppercase font-bold text-gray-400">Choose Another Active Task</span>
+              <div className="space-y-1.5">
+                {alternativeRecommendations.map((alt) => (
+                  <button
+                    key={alt.id}
+                    onClick={() => {
+                      setCustomPrimaryId(alt.id);
+                      setShowAlternativeSelector(false);
+                    }}
+                    className="w-full p-2 rounded-lg bg-white/5 hover:bg-white/10 text-left flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span className="text-white font-medium truncate">{alt.taskTitle}</span>
+                    <span className="text-gray-400 font-mono text-[10px] shrink-0">{alt.estimatedDurationMin}m</span>
+                  </button>
+                ))}
               </div>
-              <h3 className="text-sm font-bold text-white mt-3">Backend Topics Checklist</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                Step-by-step topics across Core Java, Spring Boot, SQL, and Docker.
-              </p>
             </div>
-            <div className="text-xs font-bold text-blue-400 flex items-center gap-1">
-              <span>Open Syllabus</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 3: System Design */}
-          <div 
-            onClick={() => navigate('/system-design')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-sky-500/40 hover:bg-sky-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-sky-600/20 text-sky-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Building2 size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">System Design Studio</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                High-Level Design (HLD), LLD patterns, and capacity estimation calculators.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-sky-400 flex items-center gap-1">
-              <span>Open System Design</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 4: Career Timeline */}
-          <div 
-            onClick={() => navigate('/timeline')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Calendar size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">Career Timeline</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                Month-by-month roadmap with deliverables and target CTC goals.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <span>Open Timeline</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 5: Interview Readiness */}
-          <div 
-            onClick={() => navigate('/interview-readiness')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-purple-500/40 hover:bg-purple-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Award size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">Interview Readiness</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                Objective scoring across 11 dimensions & mock interview logger.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-purple-400 flex items-center gap-1">
-              <span>Open Readiness</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 6: Target Jobs */}
-          <div 
-            onClick={() => navigate('/job-pipeline')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-amber-500/40 hover:bg-amber-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Briefcase size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">Target Job Pipeline</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                Track product companies, CTC packages, and skill gap closing actions.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-amber-400 flex items-center gap-1">
-              <span>Open Job Pipeline</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 7: Evidence Vault */}
-          <div 
-            onClick={() => navigate('/skills-tree')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-indigo-500/40 hover:bg-indigo-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <ShieldCheck size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">Skills & Evidence Vault</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                10 skill branches with verified GitHub PRs, test suites, and schemas.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-indigo-400 flex items-center gap-1">
-              <span>Open Vault</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-
-          {/* Hub Item 8: Timetable & Routine */}
-          <div 
-            onClick={() => navigate('/schedule')}
-            className="p-4 rounded-xl bg-[#0d1017] border border-white/10 hover:border-rose-500/40 hover:bg-rose-950/10 cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-rose-600/20 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Clock size={18} />
-              </div>
-              <h3 className="text-sm font-bold text-white mt-3">Daily Timetable</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-snug">
-                11am–8pm office hours, morning study block, and sleep preservation.
-              </p>
-            </div>
-            <div className="text-xs font-bold text-rose-400 flex items-center gap-1">
-              <span>Open Schedule</span>
-              <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
+          )}
 
         </div>
-      </div>
+      </section>
 
-      {/* Focus Timer Modal */}
-      <FocusTimerModal
-        isOpen={timerModalOpen}
-        onClose={() => setTimerModalOpen(false)}
-        taskTitle={timerTaskTitle}
-      />
+      {/* SECTION 7: Compact Actionable Bottleneck (At most 1, disappears when resolved) */}
+      {topBottleneck && (
+        <aside aria-label="Active Bottleneck Alert">
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+              <div className="truncate">
+                <span className="font-bold text-amber-200">{topBottleneck.skillName}: </span>
+                <span className="text-gray-300">{topBottleneck.reason}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/skills-tree')}
+              className="text-[11px] font-bold text-amber-300 hover:text-white px-2.5 py-1 rounded-lg bg-amber-500/20 shrink-0 cursor-pointer"
+            >
+              Fix Gap
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* SECTION C: Today's Plan (Maximum 3 Tasks by default) */}
+      <section aria-label="Today's Plan">
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0d1017] border border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Today's Short Plan (1.5 Hours Total)</span>
+            </h2>
+            <span className="text-[10px] text-gray-500 font-mono">1–3 Actions Max</span>
+          </div>
+
+          <div className="space-y-2">
+            {coreDailyTasks.slice(0, showExtendedPlan ? 5 : 3).map((task) => (
+              <div
+                key={task.id}
+                className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 flex items-center justify-between gap-3 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    onClick={() => {
+                      if (task.id === 'task-backend' && nextBackend) {
+                        syllabusStore.toggleItem(nextBackend.id);
+                        soundService.playCheckSound();
+                      }
+                    }}
+                    className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                      task.completed
+                        ? 'bg-emerald-600 border-emerald-500 text-white'
+                        : 'border-white/20 hover:border-white/40 text-transparent'
+                    }`}
+                    title={task.completed ? 'Completed' : 'Click to toggle'}
+                    aria-label={`Mark ${task.title} complete`}
+                  >
+                    <Check size={12} />
+                  </button>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold truncate ${task.completed ? 'line-through text-gray-500' : 'text-white'}`}>
+                        {task.title}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-white/10 text-gray-400 shrink-0">
+                        {task.category}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 truncate mt-0.5">
+                      {task.subtitle} • {task.durationMin} mins
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => handleOpenExecution(task)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                    title="Start Focused Timer"
+                    aria-label={`Start timer for ${task.title}`}
+                  >
+                    <Clock size={15} />
+                  </button>
+                  <button
+                    onClick={() => navigate(task.actionRoute)}
+                    className="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                    title="Open Dedicated Page"
+                    aria-label={`Open dedicated page for ${task.title}`}
+                  >
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Progressive Disclosure Toggle */}
+          <div className="pt-1 text-center">
+            <button
+              onClick={() => setShowExtendedPlan(prev => !prev)}
+              className="text-[11px] font-semibold text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+            >
+              {showExtendedPlan ? 'Show Less (Keep it calm)' : 'View Additional Workflows (+2 more)'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION D: Compact Career Progress (Single Calm Summary Card) */}
+      <section aria-label="Career Progress Summary">
+        <div className="p-4 rounded-xl bg-[#0d1017] border border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
+              <Target size={14} className="text-emerald-400" />
+              <span>Career Progress Pulse</span>
+            </div>
+            <button
+              onClick={() => navigate('/interview-readiness')}
+              className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+            >
+              Detailed Analytics ↗
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">DSA Solved</div>
+              <div className="text-sm font-bold text-white font-mono mt-0.5">
+                {dsaStore.attempts.length} <span className="text-[10px] text-gray-500 font-normal">problems</span>
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Current Stage</div>
+              <div className="text-sm font-bold text-purple-300 truncate mt-0.5">
+                Phase 1 (Oct–Dec)
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Readiness Score</div>
+              <div className="text-sm font-bold text-blue-400 font-mono mt-0.5">
+                68% Ready
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="text-[10px] text-gray-400 uppercase">Target CTC</div>
+              <div className="text-sm font-bold text-emerald-400 font-mono mt-0.5">
+                ₹25–45 LPA
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION E: Secondary Tools (Clean, Quiet 1-Tap Hub) */}
+      <section aria-label="Secondary Dedicated Tools">
+        <div className="space-y-2">
+          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            Dedicated Deep-Dive Pages
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <button
+              onClick={() => navigate('/timeline')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Calendar size={15} className="text-blue-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Timeline</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/system-design')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Building2 size={15} className="text-sky-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">System Design</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/job-pipeline')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Briefcase size={15} className="text-amber-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Target Jobs</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/skills-tree')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <ShieldCheck size={15} className="text-indigo-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Evidence Vault</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/schedule')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Clock size={15} className="text-rose-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Timetable</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/review')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Award size={15} className="text-purple-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Weekly Review</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/gym')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Zap size={15} className="text-orange-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Gym Split</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => navigate('/journal')}
+              className="p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/10 text-left transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span className="text-gray-200 font-medium truncate">Journal</span>
+              </div>
+              <ArrowRight size={12} className="text-gray-500 shrink-0" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Dedicated Task Execution View */}
+      {selectedExecutionTask && (
+        <TaskExecutionModal
+          isOpen={executionModalOpen}
+          onClose={() => setExecutionModalOpen(false)}
+          task={selectedExecutionTask}
+          onComplete={handleTaskComplete}
+          onPartial={handleTaskPartial}
+          onBlocked={handleTaskBlocked}
+        />
+      )}
+
     </div>
   );
 };

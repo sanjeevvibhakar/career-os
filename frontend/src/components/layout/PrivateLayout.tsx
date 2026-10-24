@@ -69,12 +69,12 @@ export const PrivateLayout: React.FC = () => {
     { name: 'Public Site', path: '/', icon: <ExternalLink size={18} /> },
   ];
 
-  // Mobile Bottom Navigation Bar (5 thumb-accessible core tools)
+  // Mobile Bottom Navigation Bar (5 thumb-accessible core tools: Home, Learn, Practice, Build, Menu)
   const mobileQuickItems = [
     { name: 'Home', path: '/dashboard', icon: <Home size={18} /> },
-    { name: 'Timeline', path: '/timeline', icon: <Calendar size={18} /> },
-    { name: 'DSA', path: '/dsa', icon: <Brain size={18} /> },
-    { name: 'Topics', path: '/sprint', icon: <Code size={18} /> },
+    { name: 'Learn', path: '/sprint', icon: <Code size={18} /> },
+    { name: 'Practice', path: '/dsa', icon: <Brain size={18} /> },
+    { name: 'Build', path: '/project-tracker', icon: <FolderGit2 size={18} /> },
   ];
 
   const SidebarContent = () => (
