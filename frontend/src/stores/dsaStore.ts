@@ -54,6 +54,7 @@ export interface DsaState {
   attempts: DsaAttempt[];
   revisions: DsaRevision[];
   
+  addCustomProblem: (problem: Omit<DsaProblemSeed, 'id'>) => number;
   logAttempt: (problemId: number, data: Omit<DsaAttempt, 'id' | 'problemId' | 'attemptNumber' | 'attemptedAt'>) => void;
   completeRevision: (revisionId: string, timeTakenMin: number, confidence: number, performance?: 'PASS_FIRST_TRY' | 'STRUGGLED' | 'FAILED') => void;
   skipRevision: (revisionId: string) => void;
@@ -83,6 +84,20 @@ export const useDsaStore = create<DsaState>()(
       problems: DSA_PROBLEMS,
       attempts: [],
       revisions: [],
+
+      addCustomProblem: (problem) => {
+        const state = get();
+        const maxId = state.problems.reduce((max, p) => Math.max(max, p.id), 0);
+        const newId = maxId + 1;
+        const newProblem: DsaProblemSeed = {
+          ...problem,
+          id: newId,
+        };
+        set({
+          problems: [newProblem, ...state.problems],
+        });
+        return newId;
+      },
 
       logAttempt: (problemId, data) => {
         set((state) => {

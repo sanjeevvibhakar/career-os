@@ -48,6 +48,9 @@ export interface DailyPlannerState {
   updateTaskStatus: (dateStr: string, taskId: string, status: TopicStatus, note?: string) => void;
   manuallySetTrackTopic: (dateStr: string, track: RoadmapTrack, topicId: string) => void;
   getCompletionSummary: (dateStr?: string) => {
+    hasDsaTask: boolean;
+    hasBackendTask: boolean;
+    hasSystemDesignTask: boolean;
     dsaCompleted: boolean;
     backendCompleted: boolean;
     systemDesignCompleted: boolean;
@@ -85,11 +88,12 @@ export function getLabelForTrack(track: RoadmapTrack): string {
   }
 }
 
-// Helper to get previous date string
-function getPreviousDateStr(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+// Helper to get previous date string (UTC safe to prevent timezone skew)
+export function getPreviousDateStr(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().split('T')[0];
 }
 
 // Helper to determine next candidate topic for a track respecting prerequisites
@@ -128,11 +132,16 @@ export function selectNextTopicForTrack(
       // Find the first unmet prerequisite topic if it belongs to this track
       const firstUnmet = trackTopics.find(t => t.id === unmetPrereqs[0]);
       if (firstUnmet && topicProgress[firstUnmet.id] !== 'COMPLETED') {
-        return {
-          topic: firstUnmet,
-          reason: `Required prerequisite before '${topic.title}' can be unlocked`,
-        };
+        const unmetOfFirst = firstUnmet.prerequisites.filter(pId => topicProgress[pId] !== 'COMPLETED');
+        if (unmetOfFirst.length === 0) {
+          return {
+            topic: firstUnmet,
+            reason: `Required prerequisite before '${topic.title}' can be unlocked`,
+          };
+        }
       }
+      // If unmet prerequisites are outside track or not yet unlocked, do not skip ahead
+      return null;
     }
   }
 
@@ -186,8 +195,11 @@ export const useDailyPlannerStore = create<DailyPlannerState>()(
         }
 
         const state = get();
-        const prevDate = getPreviousDateStr(targetDate);
-        const prevPlan = state.dailyPlans[prevDate];
+        // Look up the most recent recorded plan strictly prior to targetDate to handle missed days
+        const pastDates = Object.keys(state.dailyPlans)
+          .filter(d => d < targetDate)
+          .sort((a, b) => b.localeCompare(a));
+        const latestPastPlan = pastDates.length > 0 ? state.dailyPlans[pastDates[0]] : undefined;
 
         const tracks: RoadmapTrack[] = ['DSA', 'BACKEND', 'SYSTEM_DESIGN'];
         const tasks: DailyTaskItem[] = [];
@@ -209,16 +221,16 @@ export const useDailyPlannerStore = create<DailyPlannerState>()(
         }
 
         for (const track of tracks) {
-          // Rule 1: Check if previous day had an incomplete task for this track that should be carried over
+          // Rule 1: Check if the most recent active plan had an incomplete task for this track that should be carried over
           let carriedOverTask: DailyTaskItem | undefined;
-          if (prevPlan) {
-            const prevTrackTask = prevPlan.tasks.find(t => t.track === track);
+          if (latestPastPlan) {
+            const prevTrackTask = latestPastPlan.tasks.find(t => t.track === track);
             if (prevTrackTask && prevTrackTask.status !== 'COMPLETED') {
               carriedOverTask = {
                 ...prevTrackTask,
                 id: `task-${track.toLowerCase()}-${targetDate}`,
                 isCarriedOver: true,
-                selectionReason: `Carried over from ${prevDate} (incomplete): Continue work without losing progress`,
+                selectionReason: `Carried over from ${latestPastPlan.date} (${prevTrackTask.status.toLowerCase()}): Continue work without losing progress`,
               };
             }
           }
@@ -423,6 +435,9 @@ export const useDailyPlannerStore = create<DailyPlannerState>()(
         const systemDesignTask = plan.tasks.find(t => t.track === 'SYSTEM_DESIGN');
 
         return {
+          hasDsaTask: !!dsaTask,
+          hasBackendTask: !!backendTask,
+          hasSystemDesignTask: !!systemDesignTask,
           dsaCompleted: dsaTask?.status === 'COMPLETED',
           backendCompleted: backendTask?.status === 'COMPLETED',
           systemDesignCompleted: systemDesignTask?.status === 'COMPLETED',

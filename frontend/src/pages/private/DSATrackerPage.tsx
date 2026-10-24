@@ -74,21 +74,62 @@ export const DSATrackerPage: React.FC = () => {
     };
   }, [solvedProblemIds, dsaStore.attempts, dueRevisions]);
 
+  const [isCustomLog, setIsCustomLog] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customSource, setCustomSource] = useState('LEETCODE');
+  const [customPattern, setCustomPattern] = useState('Hash Map Lookup');
+  const [customDifficulty, setCustomDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+  const [attemptOutcome, setAttemptOutcome] = useState<'PASS_FIRST_TRY' | 'STRUGGLED' | 'FAILED'>('PASS_FIRST_TRY');
+
   const handleOpenLogModal = (problem: DsaProblemSeed) => {
+    setIsCustomLog(false);
     setSelectedProblemForLog(problem);
     setTimeTaken(25);
     setSolvedIndependently(true);
     setApproach('');
     setMistakeNote('');
     setConfidence(4);
+    setAttemptOutcome('PASS_FIRST_TRY');
+    setLogModalOpen(true);
+  };
+
+  const handleOpenCustomLogModal = () => {
+    setIsCustomLog(true);
+    setSelectedProblemForLog(null);
+    setCustomName('');
+    setCustomSource('LEETCODE');
+    setCustomPattern('Hash Map Lookup');
+    setCustomDifficulty('MEDIUM');
+    setTimeTaken(25);
+    setSolvedIndependently(true);
+    setApproach('');
+    setMistakeNote('');
+    setConfidence(4);
+    setAttemptOutcome('PASS_FIRST_TRY');
     setLogModalOpen(true);
   };
 
   const handleSaveAttempt = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProblemForLog) return;
 
-    dsaStore.logAttempt(selectedProblemForLog.id, {
+    let targetProblemId: number;
+
+    if (isCustomLog) {
+      if (!customName.trim()) return;
+      targetProblemId = dsaStore.addCustomProblem({
+        name: customName.trim(),
+        difficulty: customDifficulty,
+        source: customSource as any,
+        sourceUrl: '',
+        pattern: customPattern.trim() || 'General Algorithmic Pattern',
+        topicId: selectedTopicOrder || 1,
+      });
+    } else {
+      if (!selectedProblemForLog) return;
+      targetProblemId = selectedProblemForLog.id;
+    }
+
+    dsaStore.logAttempt(targetProblemId, {
       timeTakenMin: Number(timeTaken),
       solvedIndependently,
       approach: approach || 'Standard optimal pattern approach',
@@ -97,6 +138,7 @@ export const DSATrackerPage: React.FC = () => {
       complexitySpace: complexitySpace || 'O(1)',
       lesson: 'Good pattern recognition practice',
       confidence: Number(confidence),
+      reSolvePerformance: attemptOutcome,
     });
 
     soundService.playCheckSound();
@@ -367,6 +409,14 @@ export const DSATrackerPage: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={handleOpenCustomLogModal}
+              className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            >
+              <PlusCircle size={14} />
+              <span>+ Log Problem</span>
+            </button>
           </div>
 
           {/* Problem Table */}
@@ -515,20 +565,98 @@ export const DSATrackerPage: React.FC = () => {
       {/* ======================================================= */}
       {/* MODAL: LOG PROBLEM ATTEMPT */}
       {/* ======================================================= */}
-      {logModalOpen && selectedProblemForLog && (
+      {/* ======================================================= */}
+      {/* MODAL: LOG PROBLEM ATTEMPT */}
+      {/* ======================================================= */}
+      {logModalOpen && (selectedProblemForLog || isCustomLog) && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0e1219] border border-white/15 rounded-2xl max-w-md w-full p-5 space-y-4 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <div>
-                <h3 className="font-bold text-sm text-white">{selectedProblemForLog.name}</h3>
-                <span className="text-[11px] font-mono text-purple-300">{selectedProblemForLog.pattern}</span>
+                <h3 className="font-bold text-sm text-white">
+                  {isCustomLog ? 'Log Problem Attempt' : selectedProblemForLog?.name}
+                </h3>
+                <span className="text-[11px] font-mono text-purple-300">
+                  {isCustomLog ? 'Custom Problem Log' : selectedProblemForLog?.pattern}
+                </span>
               </div>
-              <button onClick={() => setLogModalOpen(false)} className="text-gray-400 hover:text-white">
+              <button onClick={() => setLogModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSaveAttempt} className="space-y-3">
+              {isCustomLog && (
+                <>
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1">Problem Name:</label>
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="e.g. Subarray Sum Equals K"
+                      required
+                      className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-semibold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">Source:</label>
+                      <select
+                        value={customSource}
+                        onChange={(e) => setCustomSource(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0e1219] border border-white/10 text-white font-mono cursor-pointer"
+                      >
+                        <option value="LEETCODE">LeetCode</option>
+                        <option value="STRIVER_A2Z">Striver A2Z</option>
+                        <option value="NEETCODE_150">NeetCode 150</option>
+                        <option value="GRIND_75">Grind 75</option>
+                        <option value="GEEKSFORGEEKS">GeeksforGeeks</option>
+                        <option value="CODEFORCES">Codeforces</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">Difficulty:</label>
+                      <select
+                        value={customDifficulty}
+                        onChange={(e) => setCustomDifficulty(e.target.value as any)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0e1219] border border-white/10 text-white font-mono cursor-pointer"
+                      >
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1">Algorithmic Pattern / Topic:</label>
+                    <input
+                      type="text"
+                      value={customPattern}
+                      onChange={(e) => setCustomPattern(e.target.value)}
+                      placeholder="e.g. Prefix Sum + Hash Map"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Attempt Outcome:</label>
+                <select
+                  value={attemptOutcome}
+                  onChange={(e) => setAttemptOutcome(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-[#0e1219] border border-white/10 text-white font-mono cursor-pointer"
+                >
+                  <option value="PASS_FIRST_TRY">✓ Solved independently on first attempt</option>
+                  <option value="STRUGGLED">⚠️ Solved with minor hint / struggle</option>
+                  <option value="FAILED">✗ Needed editorial / solution lookup</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-gray-300 font-medium mb-1">Time Taken (minutes):</label>
                 <input
@@ -541,15 +669,15 @@ export const DSATrackerPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-0.5">
                 <input
                   type="checkbox"
                   id="solvedIndependently"
                   checked={solvedIndependently}
                   onChange={(e) => setSolvedIndependently(e.target.checked)}
-                  className="w-4 h-4 rounded text-blue-600 bg-white/5 border-white/10"
+                  className="w-4 h-4 rounded text-blue-600 bg-white/5 border-white/10 cursor-pointer"
                 />
-                <label htmlFor="solvedIndependently" className="text-gray-200">
+                <label htmlFor="solvedIndependently" className="text-gray-200 cursor-pointer">
                   Solved independently (zero editorial hints)
                 </label>
               </div>
@@ -594,7 +722,7 @@ export const DSATrackerPage: React.FC = () => {
                       key={lvl}
                       type="button"
                       onClick={() => setConfidence(lvl)}
-                      className={`flex-1 py-1 rounded-lg font-mono font-bold ${
+                      className={`flex-1 py-1 rounded-lg font-mono font-bold cursor-pointer ${
                         confidence === lvl ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400'
                       }`}
                     >
@@ -608,13 +736,13 @@ export const DSATrackerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setLogModalOpen(false)}
-                  className="px-3 py-1.5 text-gray-400 hover:text-white"
+                  className="px-3 py-1.5 text-gray-400 hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                  className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold cursor-pointer"
                 >
                   Save Log
                 </button>

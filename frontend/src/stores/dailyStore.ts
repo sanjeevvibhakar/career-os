@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { WORKOUT_ROUTINES, type WorkoutRoutine, type ExerciseDefinition } from '../data/gymData';
 
 interface JournalEntry {
   id: string;
@@ -79,6 +80,12 @@ interface DailyState {
   // Gym actions
   saveGymSession: (session: Omit<GymSession, 'id'>) => void;
   getGymByMonth: (yearMonth: string) => GymSession[]; // '2026-10'
+  workoutRoutines: WorkoutRoutine[];
+  updateWorkoutRoutine: (routineId: string, updates: Partial<WorkoutRoutine>) => void;
+  updateExerciseInRoutine: (routineId: string, exerciseId: string, updates: Partial<ExerciseDefinition>) => void;
+  addExerciseToRoutine: (routineId: string, exercise: ExerciseDefinition) => void;
+  removeExerciseFromRoutine: (routineId: string, exerciseId: string) => void;
+  resetRoutinesToDefaults: () => void;
   
   // Schedule actions
   updateSchedule: (dayOfWeek: string, blocks: ScheduleBlock[]) => void;
@@ -218,6 +225,58 @@ export const useDailyStore = create<DailyState>()(
 
       getGymByMonth: (yearMonth) => {
         return get().gymSessions.filter(s => s.date.startsWith(yearMonth));
+      },
+
+      workoutRoutines: WORKOUT_ROUTINES,
+
+      updateWorkoutRoutine: (routineId, updates) => {
+        set(state => ({
+          workoutRoutines: (state.workoutRoutines || WORKOUT_ROUTINES).map(r =>
+            r.id === routineId ? { ...r, ...updates } : r
+          )
+        }));
+      },
+
+      updateExerciseInRoutine: (routineId, exerciseId, updates) => {
+        set(state => ({
+          workoutRoutines: (state.workoutRoutines || WORKOUT_ROUTINES).map(r => {
+            if (r.id !== routineId) return r;
+            return {
+              ...r,
+              exercises: r.exercises.map(ex =>
+                ex.id === exerciseId ? { ...ex, ...updates } : ex
+              )
+            };
+          })
+        }));
+      },
+
+      addExerciseToRoutine: (routineId, exercise) => {
+        set(state => ({
+          workoutRoutines: (state.workoutRoutines || WORKOUT_ROUTINES).map(r => {
+            if (r.id !== routineId) return r;
+            return {
+              ...r,
+              exercises: [...r.exercises, exercise]
+            };
+          })
+        }));
+      },
+
+      removeExerciseFromRoutine: (routineId, exerciseId) => {
+        set(state => ({
+          workoutRoutines: (state.workoutRoutines || WORKOUT_ROUTINES).map(r => {
+            if (r.id !== routineId) return r;
+            return {
+              ...r,
+              exercises: r.exercises.filter(ex => ex.id !== exerciseId)
+            };
+          })
+        }));
+      },
+
+      resetRoutinesToDefaults: () => {
+        set({ workoutRoutines: WORKOUT_ROUTINES });
       },
 
       updateSchedule: (dayOfWeek, blocks) => {

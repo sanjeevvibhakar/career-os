@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Dumbbell, Flame, Calendar, CheckCircle2, Play, Check, 
-  Plus, Trash2, Eye, BarChart2, Award, Clock, ArrowRight,
+  Plus, Trash2, Edit2, Eye, BarChart2, Award, Clock, ArrowRight,
   TrendingUp, Activity, Sparkles, ChevronRight, X
 } from 'lucide-react';
 import { WORKOUT_ROUTINES, getRoutineForToday, type WorkoutRoutine, type ExerciseDefinition } from '../../data/gymData';
@@ -20,9 +20,25 @@ export const GymPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daily' | 'monthly'>('daily');
 
   // Daily Workout State
+  const routines = dailyStore.workoutRoutines || WORKOUT_ROUTINES;
   const todayDefaultRoutine = getRoutineForToday();
   const [selectedRoutineId, setSelectedRoutineId] = useState<string>(todayDefaultRoutine.id);
-  const activeRoutine = WORKOUT_ROUTINES.find(r => r.id === selectedRoutineId) || todayDefaultRoutine;
+  const activeRoutine = routines.find(r => r.id === selectedRoutineId) || routines[0] || todayDefaultRoutine;
+
+  // Edit Routine Modal State
+  const [editRoutineModalOpen, setEditRoutineModalOpen] = useState(false);
+  const [routineFormTitle, setRoutineFormTitle] = useState('');
+  const [routineFormDescription, setRoutineFormDescription] = useState('');
+  const [routineFormMins, setRoutineFormMins] = useState(55);
+
+  // Edit / Add Exercise Modal State
+  const [editExerciseModalOpen, setEditExerciseModalOpen] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [exerciseFormName, setExerciseFormName] = useState('');
+  const [exerciseFormMuscle, setExerciseFormMuscle] = useState('');
+  const [exerciseFormSets, setExerciseFormSets] = useState(3);
+  const [exerciseFormReps, setExerciseFormReps] = useState('8-10 reps');
+  const [exerciseFormRest, setExerciseFormRest] = useState('60-90s');
 
   // Active exercises set tracking state
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, { completed: boolean; sets: CompletedSet[] }>>({});
@@ -32,9 +48,8 @@ export const GymPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [selectedHistorySession, setSelectedHistorySession] = useState<GymSession | null>(null);
 
-  // Month Sessions & Streak
+  // Month Sessions
   const monthSessions = dailyStore.getGymByMonth(currentYearMonth);
-  const streak = dashboardStore.getStreaks().find(s => s.type === 'gym');
   const todaySavedSession = monthSessions.find(s => s.date === today);
 
   // Initialize or rehydrate workout state when routine changes or on load
@@ -178,7 +193,6 @@ export const GymPage: React.FC = () => {
     };
 
     dailyStore.saveGymSession(newSession);
-    dashboardStore.updateStreak('gym');
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3500);
   };
@@ -339,20 +353,51 @@ export const GymPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Split Switcher Dropdown */}
-            <div className="flex items-center gap-2 self-start md:self-auto">
+            {/* Split Switcher Dropdown & Edit Routine Controls */}
+            <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
               <span className="text-xs text-gray-400 font-mono">Routine:</span>
               <select
                 value={selectedRoutineId}
                 onChange={(e) => setSelectedRoutineId(e.target.value)}
                 className="bg-[#0c101a] text-white border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-orange-500/50 cursor-pointer"
               >
-                {WORKOUT_ROUTINES.map(r => (
+                {routines.map(r => (
                   <option key={r.id} value={r.id}>
                     {r.dayOfWeek}: {r.splitType} ({r.exercises.length} ex)
                   </option>
                 ))}
               </select>
+
+              <button
+                onClick={() => {
+                  setRoutineFormTitle(activeRoutine.title);
+                  setRoutineFormDescription(activeRoutine.description);
+                  setRoutineFormMins(activeRoutine.estimatedMinutes);
+                  setEditRoutineModalOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Edit routine title, description, or duration"
+              >
+                <Edit2 size={13} />
+                <span>Edit Routine</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setEditingExerciseId(null);
+                  setExerciseFormName('');
+                  setExerciseFormMuscle('Chest / Delts / Back');
+                  setExerciseFormSets(3);
+                  setExerciseFormReps('8-10 reps');
+                  setExerciseFormRest('60-90s');
+                  setEditExerciseModalOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Add exercise to current routine"
+              >
+                <Plus size={13} />
+                <span>+ Exercise</span>
+              </button>
             </div>
           </div>
 
@@ -428,8 +473,37 @@ export const GymPage: React.FC = () => {
                       </button>
 
                       <button
+                        onClick={() => {
+                          setEditingExerciseId(exercise.id);
+                          setExerciseFormName(exercise.name);
+                          setExerciseFormMuscle(exercise.targetMuscle);
+                          setExerciseFormSets(exercise.defaultSets);
+                          setExerciseFormReps(exercise.defaultReps);
+                          setExerciseFormRest('60-90s');
+                          setEditExerciseModalOpen(true);
+                        }}
+                        className="px-2 py-1 rounded-lg text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Edit this exercise"
+                      >
+                        <Edit2 size={12} />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Remove ${exercise.name} from ${activeRoutine.title}?`)) {
+                            dailyStore.removeExerciseFromRoutine(activeRoutine.id, exercise.id);
+                          }
+                        }}
+                        className="p-1 rounded-lg text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors cursor-pointer"
+                        title="Delete exercise from routine"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+
+                      <button
                         onClick={() => handleToggleAllExerciseSets(exercise.id)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1 transition-colors ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1 transition-colors cursor-pointer ${
                           logged.completed 
                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
                             : 'bg-white/5 text-gray-300 border-white/10 hover:border-emerald-500/30'
@@ -617,14 +691,14 @@ export const GymPage: React.FC = () => {
 
             <div className="glass-panel p-4 rounded-2xl border border-white/10">
               <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
-                <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px]">Active Streak</span>
-                <Flame size={15} className="text-amber-400" />
+                <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px]">Avg Duration</span>
+                <Clock size={15} className="text-amber-400" />
               </div>
               <div className="text-2xl font-black text-white font-mono">
-                {streak?.currentCount || 0} <span className="text-xs text-gray-400 font-normal">Days</span>
+                {monthSessions.length > 0 ? Math.round(totalMinutesTrained / monthSessions.length) : 0} <span className="text-xs text-gray-400 font-normal">Mins</span>
               </div>
               <p className="text-[11px] text-gray-400 mt-1 font-mono">
-                Best: {streak?.bestCount || 0} Days
+                Across {monthSessions.length} recorded workouts
               </p>
             </div>
           </div>
@@ -753,6 +827,211 @@ export const GymPage: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* MODAL: EDIT ROUTINE */}
+      {/* ======================================================= */}
+      {editRoutineModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1219] border border-white/15 rounded-2xl max-w-md w-full p-5 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-bold text-sm text-white">Edit Routine ({activeRoutine.dayOfWeek})</h3>
+              <button onClick={() => setEditRoutineModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                dailyStore.updateWorkoutRoutine(activeRoutine.id, {
+                  title: routineFormTitle,
+                  description: routineFormDescription,
+                  estimatedMinutes: Number(routineFormMins),
+                });
+                setEditRoutineModalOpen(false);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Routine Title:</label>
+                <input
+                  type="text"
+                  value={routineFormTitle}
+                  onChange={(e) => setRoutineFormTitle(e.target.value)}
+                  required
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Description / Focus:</label>
+                <textarea
+                  rows={2}
+                  value={routineFormDescription}
+                  onChange={(e) => setRoutineFormDescription(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Estimated Duration (minutes):</label>
+                <input
+                  type="number"
+                  value={routineFormMins}
+                  onChange={(e) => setRoutineFormMins(Number(e.target.value))}
+                  min={15}
+                  max={180}
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditRoutineModalOpen(false)}
+                  className="px-3 py-1.5 text-gray-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold cursor-pointer"
+                >
+                  Save Routine
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================= */}
+      {/* MODAL: EDIT / ADD EXERCISE */}
+      {/* ======================================================= */}
+      {editExerciseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1219] border border-white/15 rounded-2xl max-w-md w-full p-5 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-bold text-sm text-white">
+                {editingExerciseId ? 'Edit Exercise' : 'Add Exercise to Routine'}
+              </h3>
+              <button onClick={() => setEditExerciseModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!exerciseFormName.trim()) return;
+
+                if (editingExerciseId) {
+                  dailyStore.updateExerciseInRoutine(activeRoutine.id, editingExerciseId, {
+                    name: exerciseFormName,
+                    targetMuscle: exerciseFormMuscle,
+                    defaultSets: Number(exerciseFormSets),
+                    defaultReps: exerciseFormReps,
+                  });
+                } else {
+                  const newExercise: ExerciseDefinition = {
+                    id: `ex-${Date.now()}`,
+                    name: exerciseFormName,
+                    category: activeRoutine.splitType === 'REST' ? 'CORE' : activeRoutine.splitType as any,
+                    targetMuscle: exerciseFormMuscle,
+                    secondaryMuscles: [],
+                    defaultSets: Number(exerciseFormSets),
+                    defaultReps: exerciseFormReps,
+                    equipment: 'Gym Equipment',
+                    instructions: ['Perform with controlled tempo and strict form.'],
+                    formTips: ['Keep core braced throughout each rep.'],
+                    commonMistakes: ['Using momentum instead of muscle control.'],
+                    diagramType: 'bench-press',
+                  };
+                  dailyStore.addExerciseToRoutine(activeRoutine.id, newExercise);
+                }
+                setEditExerciseModalOpen(false);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Exercise Name:</label>
+                <input
+                  type="text"
+                  value={exerciseFormName}
+                  onChange={(e) => setExerciseFormName(e.target.value)}
+                  placeholder="e.g. Incline Dumbbell Press"
+                  required
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Target Muscle:</label>
+                <input
+                  type="text"
+                  value={exerciseFormMuscle}
+                  onChange={(e) => setExerciseFormMuscle(e.target.value)}
+                  placeholder="e.g. Upper Chest / Anterior Deltoid"
+                  required
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-gray-300 font-medium mb-1">Sets:</label>
+                  <input
+                    type="number"
+                    value={exerciseFormSets}
+                    onChange={(e) => setExerciseFormSets(Number(e.target.value))}
+                    min={1}
+                    max={10}
+                    className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 font-medium mb-1">Target Reps:</label>
+                  <input
+                    type="text"
+                    value={exerciseFormReps}
+                    onChange={(e) => setExerciseFormReps(e.target.value)}
+                    placeholder="e.g. 8-12 reps"
+                    className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 font-medium mb-1">Rest Period:</label>
+                <input
+                  type="text"
+                  value={exerciseFormRest}
+                  onChange={(e) => setExerciseFormRest(e.target.value)}
+                  placeholder="60-90s"
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditExerciseModalOpen(false)}
+                  className="px-3 py-1.5 text-gray-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold cursor-pointer"
+                >
+                  {editingExerciseId ? 'Update Exercise' : 'Add to Routine'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useDailyPlannerStore, selectNextTopicForTrack } from './dailyPlannerStore';
+import { useDailyPlannerStore, selectNextTopicForTrack, getPreviousDateStr } from './dailyPlannerStore';
 import { MASTER_ROADMAP_TOPICS } from '../data/masterRoadmapData';
 
 describe('dailyPlannerStore & Master Roadmap Engine', () => {
@@ -137,4 +137,49 @@ describe('dailyPlannerStore & Master Roadmap Engine', () => {
     expect(history[1].date).toBe('2026-10-24');
     expect(history[2].date).toBe('2026-10-23');
   });
+
+  it('handles multi-day gap (missed days) without losing carry-over or creating backlog bloat', () => {
+    const store = useDailyPlannerStore.getState();
+    
+    // User studies on October 20
+    const day1Plan = store.getOrCreatePlanForDate('2026-10-20');
+    const dsaTaskDay1 = day1Plan.tasks.find(t => t.track === 'DSA')!;
+    
+    // Mark DSA complete on Oct 20, leaving Backend & System Design incomplete
+    store.toggleTaskComplete('2026-10-20', dsaTaskDay1.id);
+
+    // User is absent on Oct 21, Oct 22, Oct 23, and resumes on Oct 24 (4 days later)
+    const resumePlan = store.getOrCreatePlanForDate('2026-10-24');
+
+    // Should NOT create an overwhelming backlog - strictly at most 3 focused tasks
+    expect(resumePlan.tasks.length).toBe(3);
+
+    // Incomplete Backend task from Oct 20 must be carried over with context
+    const backendTask = resumePlan.tasks.find(t => t.track === 'BACKEND')!;
+    expect(backendTask.topicId).toBe('backend-03-java-oop');
+    expect(backendTask.isCarriedOver).toBe(true);
+    expect(backendTask.selectionReason).toContain('Carried over from 2026-10-20');
+
+    // Completed DSA task should have advanced to Two Pointers
+    const dsaTask = resumePlan.tasks.find(t => t.track === 'DSA')!;
+    expect(dsaTask.topicId).toBe('dsa-05-two-pointers');
+    expect(dsaTask.isCarriedOver).toBe(false);
+  });
+
+  it('accurately computes previous dates across month and year boundaries in UTC', () => {
+    expect(getPreviousDateStr('2027-03-01')).toBe('2027-02-28');
+    expect(getPreviousDateStr('2027-01-01')).toBe('2026-12-31');
+    expect(getPreviousDateStr('2028-03-01')).toBe('2028-02-29'); // Leap year
+    expect(getPreviousDateStr('2026-10-01')).toBe('2026-09-30');
+  });
+
+  it('prevents jumping over locked prerequisites when dependencies are unsatisfied', () => {
+    // If backend-01 is NOT completed, backend-03 must not be scheduled
+    const nextSelection = selectNextTopicForTrack('BACKEND', {
+      'backend-01-java-syntax': 'NOT_STARTED',
+    });
+
+    expect(nextSelection?.topic.id).toBe('backend-01-java-syntax');
+  });
 });
+

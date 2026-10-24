@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   User, Briefcase, Wrench, Layers, ExternalLink, 
-  Plus, Trash2, Edit2, Check, Sparkles, RefreshCw, Save 
+  Plus, Trash2, Edit2, Check, Sparkles, RefreshCw, Save,
+  Target, Clock, ShieldCheck
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -14,10 +15,16 @@ import {
   type PortfolioSkill, 
   type PortfolioExperience 
 } from '../../stores/portfolioStore';
+import { useCareerStore } from '../../stores/careerStore';
 
 export const ProfileEditPage: React.FC = () => {
   const portfolioStore = usePortfolioStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'skills' | 'experience'>('profile');
+  const careerStore = useCareerStore();
+  const [activeTab, setActiveTab] = useState<'career' | 'profile' | 'projects' | 'skills' | 'experience'>('career');
+
+  // Career Form state
+  const [careerForm, setCareerForm] = useState(careerStore.profile);
+  const [careerSaved, setCareerSaved] = useState(false);
 
   // Profile Form state
   const [profileForm, setProfileForm] = useState(portfolioStore.profile);
@@ -62,6 +69,14 @@ export const ProfileEditPage: React.FC = () => {
     technologies: [],
   });
   const [expTechInput, setExpTechInput] = useState('');
+
+  // Handle Career Profile Save
+  const handleSaveCareerProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    careerStore.updateProfile(careerForm);
+    setCareerSaved(true);
+    setTimeout(() => setCareerSaved(false), 2500);
+  };
 
   // Handle Profile Save
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -110,7 +125,7 @@ export const ProfileEditPage: React.FC = () => {
 
   const handleSaveProject = () => {
     if (!projectForm.title) return;
-    const stack = techStackInput.split(',').map((s) => s.trim()).filter(Boolean);
+    const stack = techStackInput.split(',').map((s: string) => s.trim()).filter(Boolean);
     const slug = projectForm.slug || projectForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const payload = { ...projectForm, slug, techStack: stack };
 
@@ -178,7 +193,7 @@ export const ProfileEditPage: React.FC = () => {
 
   const handleSaveExp = () => {
     if (!expForm.company || !expForm.role) return;
-    const stack = expTechInput.split(',').map((s) => s.trim()).filter(Boolean);
+    const stack = expTechInput.split(',').map((s: string) => s.trim()).filter(Boolean);
     const payload = { ...expForm, technologies: stack };
     if (editingExpId) {
       portfolioStore.updateExperience(editingExpId, payload);
@@ -236,20 +251,32 @@ export const ProfileEditPage: React.FC = () => {
       {/* 2. Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-2 overflow-x-auto">
         <button
+          onClick={() => setActiveTab('career')}
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer ${
+            activeTab === 'career'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Target size={15} />
+          <span>Career OS Context & Settings</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('profile')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer ${
             activeTab === 'profile'
               ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm'
               : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
         >
           <User size={15} />
-          <span>Profile & Bio</span>
+          <span>Public Bio</span>
         </button>
 
         <button
           onClick={() => setActiveTab('projects')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer ${
             activeTab === 'projects'
               ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm'
               : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -261,7 +288,7 @@ export const ProfileEditPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('skills')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer ${
             activeTab === 'skills'
               ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm'
               : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -273,7 +300,7 @@ export const ProfileEditPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('experience')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 ${
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer ${
             activeTab === 'experience'
               ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 shadow-sm'
               : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -285,6 +312,173 @@ export const ProfileEditPage: React.FC = () => {
       </div>
 
       {/* 3. TAB CONTENT */}
+
+      {/* TAB 0: CAREER OS CONTEXT */}
+      {activeTab === 'career' && (
+        <Card className="p-5 sm:p-6 space-y-5">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Target size={18} className="text-blue-400" />
+                <span>My Career Context & Execution Blueprint</span>
+              </h2>
+              <p className="text-xs text-gray-400">
+                Initial profile settings governing your roadmap, timetable hours, and target compensation.
+              </p>
+            </div>
+            {careerSaved && (
+              <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                <Check size={13} /> Saved Career Settings!
+              </span>
+            )}
+          </div>
+
+          <form onSubmit={handleSaveCareerProfile} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Current Company</label>
+                <input
+                  type="text"
+                  value={careerForm.currentCompany}
+                  onChange={(e) => setCareerForm({ ...careerForm, currentCompany: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Current CTC (₹ LPA)</label>
+                <input
+                  type="number"
+                  value={careerForm.currentCtcLpa}
+                  onChange={(e) => setCareerForm({ ...careerForm, currentCtcLpa: Number(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Current Workplace Assignment / Training</label>
+                <input
+                  type="text"
+                  value={careerForm.currentAssignmentRole}
+                  onChange={(e) => setCareerForm({ ...careerForm, currentAssignmentRole: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 block mb-1">Training Start</label>
+                  <input
+                    type="number"
+                    value={careerForm.officeTrainingSchedule.startHour}
+                    onChange={(e) => setCareerForm({
+                      ...careerForm,
+                      officeTrainingSchedule: { ...careerForm.officeTrainingSchedule, startHour: Number(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <span className="text-[10px] text-gray-500 font-mono">11 AM (11:00)</span>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 block mb-1">Training End</label>
+                  <input
+                    type="number"
+                    value={careerForm.officeTrainingSchedule.endHour}
+                    onChange={(e) => setCareerForm({
+                      ...careerForm,
+                      officeTrainingSchedule: { ...careerForm.officeTrainingSchedule, endHour: Number(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <span className="text-[10px] text-gray-500 font-mono">8 PM (20:00)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Primary Career Goal</label>
+                <input
+                  type="text"
+                  value={careerForm.targetCareer.primaryIdentity}
+                  onChange={(e) => setCareerForm({
+                    ...careerForm,
+                    targetCareer: { ...careerForm.targetCareer, primaryIdentity: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Target CTC Range</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={careerForm.targetCareer.targetCtcMinLpa}
+                    onChange={(e) => setCareerForm({
+                      ...careerForm,
+                      targetCareer: { ...careerForm.targetCareer, targetCtcMinLpa: Number(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <span className="text-gray-400 text-xs">to</span>
+                  <input
+                    type="number"
+                    value={careerForm.targetCareer.targetCtcMaxLpa}
+                    onChange={(e) => setCareerForm({
+                      ...careerForm,
+                      targetCareer: { ...careerForm.targetCareer, targetCtcMaxLpa: Number(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <span className="text-gray-400 text-xs shrink-0">LPA</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-300 block mb-1">Target Switching Period</label>
+                <input
+                  type="date"
+                  value={careerForm.targetCareer.targetDate}
+                  onChange={(e) => setCareerForm({
+                    ...careerForm,
+                    targetCareer: { ...careerForm.targetCareer, targetDate: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                />
+                <span className="text-[10px] text-gray-500 font-mono">May–June 2027</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-blue-950/20 border border-blue-500/20 text-xs space-y-1.5">
+              <div className="font-bold text-blue-300 flex items-center gap-1.5">
+                <ShieldCheck size={14} />
+                <span>Primary Engineering Stack & Experience Baseline</span>
+              </div>
+              <p className="text-gray-300">
+                <strong>Primary Stack:</strong> Java 21 and Spring Boot 3 with PostgreSQL, Docker, and Redis.
+              </p>
+              <p className="text-gray-300">
+                <strong>DSA Background:</strong> Previously solved hundreds of DSA problems. DSA module focuses on pattern mastery, optimal complexity, and interview execution rather than absolute beginner syntax.
+              </p>
+              <p className="text-gray-400 text-[11px]">
+                <strong>AI Engineering:</strong> Optional future extension. Not a core prerequisite during Phase 1–4 foundational execution.
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="primary" className="text-xs font-bold px-5 py-2">
+                Save Career Settings
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       {/* TAB A: PROFILE */}
       {activeTab === 'profile' && (

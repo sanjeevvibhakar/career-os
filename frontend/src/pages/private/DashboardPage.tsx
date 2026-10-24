@@ -134,17 +134,23 @@ export const DashboardPage: React.FC = () => {
             <div className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
               summary.dsaCompleted 
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
-                : 'bg-white/[0.02] border-white/5 text-gray-400'
+                : summary.hasDsaTask
+                ? 'bg-white/[0.02] border-white/5 text-gray-400'
+                : 'bg-white/[0.01] border-white/5 text-gray-500'
             }`}>
               <span className="font-medium">1. DSA</span>
               <span className="font-bold flex items-center gap-1">
-                {summary.dsaCompleted ? (
-                  <>
-                    <Check size={13} className="text-emerald-400" />
-                    <span>Completed</span>
-                  </>
+                {summary.hasDsaTask ? (
+                  summary.dsaCompleted ? (
+                    <>
+                      <Check size={13} className="text-emerald-400" />
+                      <span>Completed</span>
+                    </>
+                  ) : (
+                    <span>Not completed</span>
+                  )
                 ) : (
-                  <span>Not completed</span>
+                  <span className="text-gray-500 text-[11px] font-normal">None scheduled</span>
                 )}
               </span>
             </div>
@@ -152,17 +158,23 @@ export const DashboardPage: React.FC = () => {
             <div className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
               summary.backendCompleted 
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
-                : 'bg-white/[0.02] border-white/5 text-gray-400'
+                : summary.hasBackendTask
+                ? 'bg-white/[0.02] border-white/5 text-gray-400'
+                : 'bg-white/[0.01] border-white/5 text-gray-500'
             }`}>
               <span className="font-medium">2. Backend</span>
               <span className="font-bold flex items-center gap-1">
-                {summary.backendCompleted ? (
-                  <>
-                    <Check size={13} className="text-emerald-400" />
-                    <span>Completed</span>
-                  </>
+                {summary.hasBackendTask ? (
+                  summary.backendCompleted ? (
+                    <>
+                      <Check size={13} className="text-emerald-400" />
+                      <span>Completed</span>
+                    </>
+                  ) : (
+                    <span>Not completed</span>
+                  )
                 ) : (
-                  <span>Not completed</span>
+                  <span className="text-gray-500 text-[11px] font-normal">None scheduled</span>
                 )}
               </span>
             </div>
@@ -170,17 +182,23 @@ export const DashboardPage: React.FC = () => {
             <div className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
               summary.systemDesignCompleted 
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
-                : 'bg-white/[0.02] border-white/5 text-gray-400'
+                : summary.hasSystemDesignTask
+                ? 'bg-white/[0.02] border-white/5 text-gray-400'
+                : 'bg-white/[0.01] border-white/5 text-gray-500'
             }`}>
               <span className="font-medium">3. System Design</span>
               <span className="font-bold flex items-center gap-1">
-                {summary.systemDesignCompleted ? (
-                  <>
-                    <Check size={13} className="text-emerald-400" />
-                    <span>Completed</span>
-                  </>
+                {summary.hasSystemDesignTask ? (
+                  summary.systemDesignCompleted ? (
+                    <>
+                      <Check size={13} className="text-emerald-400" />
+                      <span>Completed</span>
+                    </>
+                  ) : (
+                    <span>Not completed</span>
+                  )
                 ) : (
-                  <span>Not completed</span>
+                  <span className="text-gray-500 text-[11px] font-normal">None scheduled</span>
                 )}
               </span>
             </div>
@@ -201,7 +219,12 @@ export const DashboardPage: React.FC = () => {
           </h2>
 
           <button
-            onClick={() => dailyPlannerStore.resetPlanForDate(todayStr)}
+            onClick={() => {
+              if (plan.overallCompletedCount > 0 && !window.confirm('You have completed tasks recorded for today. Resetting will recalculate today\'s plan based on current roadmap state. Proceed?')) {
+                return;
+              }
+              dailyPlannerStore.resetPlanForDate(todayStr);
+            }}
             className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
             title="Recalculate tasks based on latest roadmap position"
           >
