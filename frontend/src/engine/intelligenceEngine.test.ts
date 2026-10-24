@@ -88,4 +88,43 @@ describe('intelligenceEngine', () => {
 
     expect(result.currentContext.availableSessionMinutes).toBeLessThanOrEqual(30);
   });
+
+  it('produces exactly one primary recommendation with a guaranteed fallback task', () => {
+    const result = computeIntelligenceRecommendations({
+      profile: INITIAL_CAREER_PROFILE,
+      skills: INITIAL_CAREER_SKILLS,
+      roadmap: INITIAL_ROADMAP_PHASES,
+      project: INITIAL_FLAGSHIP_PROJECT,
+      dueRevisions: [],
+      weakPatterns: [],
+      recurringMistakes: [],
+      currentHour: 9,
+      isWeekend: false,
+    });
+
+    expect(result.primaryRecommendation).toBeDefined();
+    expect(result.primaryRecommendation.taskTitle).toBeTruthy();
+    expect(result.primaryRecommendation.reason).toBeTruthy();
+    expect(result.primaryRecommendation.fallbackTask).toBeDefined();
+    expect(result.primaryRecommendation.fallbackTask.taskTitle).toBeTruthy();
+  });
+
+  it('identifies top engineering bottlenecks with actionable remedy', () => {
+    const result = computeIntelligenceRecommendations({
+      profile: INITIAL_CAREER_PROFILE,
+      skills: INITIAL_CAREER_SKILLS,
+      roadmap: INITIAL_ROADMAP_PHASES,
+      project: INITIAL_FLAGSHIP_PROJECT,
+      dueRevisions: [],
+      weakPatterns: [{ pattern: 'Sliding Window', topicName: 'Arrays', avgConfidence: 40 }],
+      recurringMistakes: [{ category: 'EDGE_CASE_FAILURE', count: 4 }],
+      currentHour: 9,
+      isWeekend: false,
+    });
+
+    expect(result.detectedBottlenecks.length).toBeGreaterThan(0);
+    const top = result.detectedBottlenecks[0];
+    expect(top.skillName).toBeTruthy();
+    expect(top.actionSuggested).toBeTruthy();
+  });
 });
