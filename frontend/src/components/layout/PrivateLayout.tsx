@@ -102,12 +102,12 @@ export const PrivateLayout: React.FC = () => {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#090b10] border-r border-white/10 w-64 text-sm select-none">
+    <div className="flex flex-col h-full bg-[var(--bg-secondary)] border-r border-[var(--border)] w-64 text-sm select-none transition-colors duration-200">
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
+      <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)]">
         <Link to="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-          <span className="font-extrabold text-lg text-white bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+          <span className="font-extrabold text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-400 dark:to-indigo-400">
             Career OS
           </span>
         </Link>
@@ -155,7 +155,7 @@ export const PrivateLayout: React.FC = () => {
       </div>
 
       {/* Bottom Footer Actions */}
-      <div className="p-4 border-t border-white/10 space-y-1 bg-[#090b10]">
+      <div className="p-4 border-t border-[var(--border)] space-y-1 bg-[var(--bg-secondary)]">
         <div className="px-3 py-1.5 text-xs text-gray-400 font-medium truncate">
           Logged in as <span className="text-gray-200">{userName || 'Sanjeev'}</span>
         </div>
@@ -182,7 +182,7 @@ export const PrivateLayout: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#07090e] text-gray-100">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-200">
       {/* Mobile Drawer Overlay */}
       {sidebarOpen && (
         <div 
@@ -205,7 +205,7 @@ export const PrivateLayout: React.FC = () => {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Top Header */}
-        <header className="lg:hidden h-14 border-b border-white/10 flex items-center justify-between px-4 bg-[#090b10] z-30 shrink-0">
+        <header className="lg:hidden h-14 border-b border-[var(--border)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]/95 backdrop-blur-md z-30 shrink-0 transition-colors duration-200">
           <Link to="/dashboard" className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <span className="font-extrabold text-sm text-white bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
@@ -232,7 +232,7 @@ export const PrivateLayout: React.FC = () => {
         {/* Mobile Bottom Navigation Bar (Thumb Ergonomics) */}
         <nav 
           aria-label="Mobile Navigation" 
-          className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#090b10]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around px-2 z-40"
+          className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--bg-secondary)]/95 backdrop-blur-md border-t border-[var(--border)] flex items-center justify-around px-2 z-40 transition-colors duration-200 shadow-lg"
         >
           {mobileQuickItems.map((item) => {
             const active = isItemActive(item);
